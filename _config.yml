@@ -1,0 +1,35 @@
+# Configuration Jekyll pour GitHub Pages.
+# Theme : just-the-docs (charge via jekyll-remote-theme, supporte par GitHub Pages).
+# Ce depot est la documentation centrale Acervatim : espaces Utilisateur / Developpeur + Legal.
+
+title: Acervatim
+description: >-
+  Documentation centrale d'Acervatim : application Android de gestion de
+  collections (vinyles, mangas...), 100 % hors-ligne par defaut, avec un backend
+  optionnel d'enrichissement et de synchronisation.
+lang: fr
+
+remote_theme: just-the-docs/just-the-docs
+plugins:
+  - jekyll-remote-theme
+
+search_enabled: true
+heading_anchors: true
+color_scheme: light
+
+# Liens de navigation auxiliaires (coin superieur droit).
+aux_links:
+  "Application (mvc)": "https://github.com/gbeudaert/Acervus"
+  "Backend (acervus-backend)": "https://github.com/gbeudaert/acervatim-backend"
+
+footer_content: >-
+  Acervatim - documentation centrale. Application sous licence Apache 2.0.
+
+# Documents de travail / plan, non publies comme pages du site.
+exclude:
+  - plan-consolidation-documentation.md
+  - private/
+  - vendor/
+  - Gemfile
+  - Gemfile.lock
+  - README.md

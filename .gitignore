@@ -1,0 +1,17 @@
+# Jekyll / GitHub Pages build artifacts
+_site/
+.jekyll-cache/
+.jekyll-metadata
+.sass-cache/
+
+# Local tooling
+.bundle/
+vendor/
+Gemfile.lock
+
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Matiere confidentielle eventuelle (cf. plan de consolidation)
+private/
