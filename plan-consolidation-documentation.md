@@ -6,7 +6,28 @@
 > figurent pas** : ils restent dans les projets. Les `docs/interne/` des projets ne servent qu'aux
 > **sprints**.
 
-Statut : **plan** (non exécuté). Révisé le 2026-06-28.
+Statut : **partiellement exécuté** (2026-06-29). Révisé le 2026-06-28.
+
+## 0. État d'exécution
+
+**Fait (dépôt `acervatim-docs`, en local) :**
+- `git init` (branche `main`, **pas de remote**), `.gitignore`, `_config.yml` (just-the-docs).
+- Site structuré : `index.md` + 3 sections (`utilisateur/`, `developpeur/`, `legal/`) avec front matter et nav.
+- Utilisateur : présentation, fonctionnalités, sources de données, mode connecté.
+- Développeur : architecture, backend, référence API, auth Google, déploiement Pi, pivot ISBN, Play Store (normalisé).
+- Légal : confidentialité **canonique** (version backend, e-mail rempli) + stubs CGU / mentions légales / Data Safety.
+- Liens internes vérifiés (aucun lien mort) ; commit initial local effectué.
+- Choix d'exclusion appliqué : le guide de scan (wiring Android, sprint-couplé) et le runbook Play Store
+  brut **ne sont pas migrés** ; seules leurs versions normalisées / pointeurs subsistent.
+
+**Reste à faire — gated (destructif / sortant, à confirmer) :**
+- Créer le **remote public** + premier push (expose le contenu — décision sortante).
+- Activer **GitHub Pages** (domaine ? redirection depuis l'ancienne URL `mvc`).
+- **Supprimer / rediriger** le site public dans `mvc/docs` (casse la page Pages actuelle du dépôt `mvc`).
+- **Nettoyer `docs/interne`** des projets pour ne garder que les sprints : relocaliser `context-ia.md`
+  (auto-chargé par le `CLAUDE.md` backend), `api-mobile-spec.md`, guides, études, archives — et mettre
+  à jour les `CLAUDE.md` en conséquence.
+- Grep secrets en CI sur le dépôt public.
 
 ## 1. Principe directeur
 
