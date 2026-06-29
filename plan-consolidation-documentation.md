@@ -16,17 +16,27 @@ Statut : **partiellement exécuté** (2026-06-29). Révisé le 2026-06-28.
 - Utilisateur : présentation, fonctionnalités, sources de données, mode connecté.
 - Développeur : architecture, backend, référence API, auth Google, déploiement Pi, pivot ISBN, Play Store (normalisé).
 - Légal : confidentialité **canonique** (version backend, e-mail rempli) + stubs CGU / mentions légales / Data Safety.
-- Liens internes vérifiés (aucun lien mort) ; commit initial local effectué.
+- Liens internes vérifiés (aucun lien mort) ; commits locaux effectués.
 - Choix d'exclusion appliqué : le guide de scan (wiring Android, sprint-couplé) et le runbook Play Store
   brut **ne sont pas migrés** ; seules leurs versions normalisées / pointeurs subsistent.
+
+**Fait (nettoyage des projets — `docs/interne` = sprints uniquement) :**
+- **Backend** : relocalisé hors de `docs/interne/` vers **`docs/travail/`** (gitignored) :
+  `context-ia.md`, `api-mobile-spec.md`, `invitations-et-abonnements.md`, `setup-google-cloud-oauth.md`,
+  `CONTEXT_isbn_to_mal.md`, `etudes/`, `reviews/`, et les guides (`nas-synology`, `aws-archive`) sous
+  `travail/archives/`. `docs/interne/` ne contient plus que `sprints/`. `CLAUDE.md` et
+  `sprints/README.md` mis à jour (chemins `context-ia` / guides). `politique-confidentialite.md`
+  remplacée par un pointeur vers la version canonique de la doc centrale.
+- **App (`mvc`)** : relocalisé vers **`docs/travail/`** : `google-oauth-setup.md`,
+  `guide-scan-enrichissement-app.md`, `playstore-deployment.md`, `play-store-release-0.1.0.md`,
+  `assets/`. `docs/interne/` ne contient plus que les sprints (`sprint-09…16`, `sprint-realises`,
+  `sprint-tech-*`). `.gitignore` mis à jour (`/docs/travail/`).
+- Liens de la doc centrale repointés vers `docs/travail/` (api-spec, setup OAuth, guide scan, runbook Play Store).
 
 **Reste à faire — gated (destructif / sortant, à confirmer) :**
 - Créer le **remote public** + premier push (expose le contenu — décision sortante).
 - Activer **GitHub Pages** (domaine ? redirection depuis l'ancienne URL `mvc`).
 - **Supprimer / rediriger** le site public dans `mvc/docs` (casse la page Pages actuelle du dépôt `mvc`).
-- **Nettoyer `docs/interne`** des projets pour ne garder que les sprints : relocaliser `context-ia.md`
-  (auto-chargé par le `CLAUDE.md` backend), `api-mobile-spec.md`, guides, études, archives — et mettre
-  à jour les `CLAUDE.md` en conséquence.
 - Grep secrets en CI sur le dépôt public.
 
 ## 1. Principe directeur

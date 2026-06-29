@@ -113,7 +113,7 @@ commenté pas à pas) et l'[index des sprints backend](../../acervus-backend/doc
 3. Backend : route vers la bonne source (Discogs pour le vinyle ; **MyAnimeList + BnF** pour le manga, via un pivot ISBN → titre original ; TMDB pour les films), cache + quotas, renvoie un **`UnifiedItem`**.
 4. App : pré-remplit le formulaire d'ajout ; le code-barres scanné est persisté sur l'item.
 - Détail dev (provenance des champs, flux scan, pivot ISBN manga) : [Sources de données & pivot ISBN](sources-et-pivot-isbn.md).
-- Détail app (wiring Android) : [`mvc/docs/interne/guide-scan-enrichissement-app.md`](../../mvc/docs/interne/guide-scan-enrichissement-app.md).
+- Détail app (wiring Android) : [`mvc/docs/travail/guide-scan-enrichissement-app.md`](../../mvc/docs/travail/guide-scan-enrichissement-app.md).
 
 ## Modèle de données — façade
 

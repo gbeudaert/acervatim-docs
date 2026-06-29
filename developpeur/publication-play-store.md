@@ -9,7 +9,7 @@ nav_order: 6
 
 Vue normalisée du processus de publication de l'application Android `app.acervatim` sur Google Play.
 Le **runbook opérationnel détaillé** (keystore, signature, captures, fiche de release) vit dans le
-dépôt applicatif : [`mvc/docs/interne/playstore-deployment.md`](../../mvc/docs/interne/playstore-deployment.md).
+dépôt applicatif : [`mvc/docs/travail/playstore-deployment.md`](../../mvc/docs/travail/playstore-deployment.md).
 
 ## Modèle de distribution
 
@@ -49,5 +49,5 @@ les données traitées en mode connecté. Le tableau de correspondance Google Pl
 
 ## Voir aussi
 
-- Runbook complet : [`mvc/docs/interne/playstore-deployment.md`](../../mvc/docs/interne/playstore-deployment.md).
+- Runbook complet : [`mvc/docs/travail/playstore-deployment.md`](../../mvc/docs/travail/playstore-deployment.md).
 - [Authentification Google](auth-google.md) · [Politique de confidentialité](../legal/confidentialite.md) · [Data Safety](../legal/data-safety.md).

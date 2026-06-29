@@ -86,6 +86,11 @@ Zones extraites → `BnfNotice` :
   manhwa / one_shot…) **et match auteur** (le nom BnF `700` vs `authors` MAL, insensible casse /
   accents / ordre). L'auteur est le **validateur robuste** : il rejette les faux positifs quand le
   titre matche par hasard. Sans signal fort (ni auteur ni type+rang 0) → pas de sélection (`bnf_only`).
+- **Piège type LN vs manga** : l'œuvre source japonaise peut être un **light novel** alors que
+  l'édition FR est une **adaptation manga** (cas réel : *Kakuzetsu Toshi no Joou* / *Attack on Titan:
+  The Harsh Mistress of the City* est un LN sur MAL, catalogué adaptation manga côté BnF). Pour
+  l'adaptation, l'auteur MAL peut être le **mangaka adaptateur** et non l'auteur original → accepter un
+  match sur **l'un OU l'autre**.
 
 ### Sortie
 Un `UnifiedItem` au niveau **série** (pour le fan-out des tomes), enrichi de
@@ -117,6 +122,27 @@ Le process est tracé explicitement (préfixes `bnf:` et `pivot:`) :
 
 On loggue : ce que la BnF a parsé, ce qu'on en a extrait, les séries en cours (comptage partiel), et
 le pivot (ce qu'on interroge / ce qu'on retient / le score de confiance).
+
+## Modes d'échec & fallbacks
+
+| Situation | Comportement |
+|---|---|
+| ISBN absent du catalogue BnF | `unresolved` (`bnf_not_found`). |
+| Notice sans `454` ni `500` (essai FR original, pas une traduction, ou catalogage incomplet) | `bnf_only`, `originalTitle: null` → repli possible sur **data.bnf.fr** (entité Œuvre, titre original mieux structuré, accès RDF/SPARQL). |
+| MAL renvoie 0 résultat | retry sans normalisation destructive, puis avec le titre EN si dispo ; sinon `bnf_only`. |
+| MAL renvoie N candidats sans match auteur/type net | renvoyer top-N + scores, **ne pas auto-sélectionner**. |
+| Romaji BnF ≠ romaji MAL malgré le fuzzy serveur | dernier recours : **pivot AniList** (champ `idMal`) — fuzzy-match sur AniList puis récupérer l'ID MAL canonique. |
+
+> **Pas d'identifiant pivot natif** : la BnF expose un ARK, MAL ne porte pas d'ISBN. Le pont est le
+> **titre original romaji** (`454$t`) envoyé au `q=` fuzzy de MAL, **confirmé par auteur + type**.
+
+## Note romanisation
+
+BnF et MAL romanisent différemment (`jyouou` vs `joou`). Ce n'est **pas bloquant** : le `q=` de MAL
+est fuzzy côté serveur et absorbe l'écart sur le titre brut. Une normalisation romaji (macrons,
+digraphes `jyo→jo`/`sy→sh`, voyelles longues `ou→o`) n'est utile que pour **affiner le
+`confidence_score`** côté application (fuzzy Levenshtein / Dice — **pas** de trigramme SQL, la base est
+MariaDB), jamais pour interroger MAL.
 
 ## Limites connues
 
