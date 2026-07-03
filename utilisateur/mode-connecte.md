@@ -7,25 +7,31 @@ nav_order: 4
 
 # Le mode connecté (optionnel)
 
-Acervatim fonctionne **intégralement sans compte ni réseau**. Le **mode connecté** est une option :
-en vous connectant avec Google, vous débloquez des services qui s'appuient sur le **serveur
-Acervatim**. Vous pouvez l'ignorer complètement et continuer à utiliser l'application en local.
+Acervatim fonctionne **intégralement sans compte ni réseau**. Au-dessus de ce socle hors-ligne,
+deux niveaux optionnels s'ajoutent — vous pouvez les ignorer complètement et continuer à utiliser
+l'application en local.
 
-## Ce que le mode connecté apporte
+## Les trois modes
 
-| Service | À quoi ça sert |
+| Mode | Ce qu'il apporte |
 |---|---|
-| **Enrichissement au scan** | Scanner un disque ou un manga et récupérer automatiquement titre, auteur·rice·s, pochette, année… depuis des bases spécialisées (voir [D'où viennent les informations](sources-de-donnees.md)). |
-| **Synchronisation** | Retrouver vos collections sur plusieurs appareils, sauvegardées côté serveur. |
-| **Compte** | Export de vos données (portabilité) et suppression de compte en un geste. |
-| **Premium** | Quotas étendus et fonctionnalités avancées (via Google Play ou code d'invitation). |
+| **Hors-ligne** (par défaut) | Tout l'essentiel, sans compte ni réseau : saisie manuelle, scan local, recherche, wishlist, import/export, sauvegarde ZIP. |
+| **Connecté** | **Enrichissement** des fiches (titre, auteur·rice·s, pochette, année, synopsis…) depuis des bases spécialisées (voir [D'où viennent les informations](sources-de-donnees.md)), en utilisant **vos propres jetons d'accès** aux sources (*bring your own token*). Pas de synchronisation. |
+| **Premium** | Enrichissement avec les **jetons Acervatim** — aucune clé personnelle à créer. Dans un second temps : **synchronisation cloud** de vos collections, d'abord comme sauvegarde, puis pour la consultation en ligne. |
+
+## Le mode connecté en pratique
+
+- **Enrichissement au scan ou à la recherche** : scanner un disque ou un manga et récupérer
+  automatiquement ses métadonnées depuis des bases spécialisées, avec les jetons que vous avez
+  renseignés dans **Réglages → Comptes & sources**.
+- **Compte** : export de vos données (portabilité) et suppression de compte en un geste.
 
 ## Ce qui reste toujours vrai
 
 - **Offline-first** : consultation, édition, recherche locale, import/export fonctionnent **sans
   réseau**, connecté ou non.
 - **Rien en arrière-plan** : le serveur n'est sollicité que sur une **action explicite** de votre
-  part (scan, recherche, synchronisation). Jamais de requête silencieuse.
+  part (scan, recherche). Jamais de requête silencieuse.
 - **Privacy by design** : aucune donnée personnelle directe n'est stockée côté serveur — pas de nom,
   pas de photo, et votre adresse e-mail Google est ignorée. Détails : [politique de
   confidentialité](../legal/confidentialite.md).
@@ -34,8 +40,8 @@ Acervatim**. Vous pouvez l'ignorer complètement et continuer à utiliser l'appl
 
 1. Vous vous connectez avec **Google Sign-In**.
 2. L'application échange ce login contre un **jeton de session** stocké chiffré sur l'appareil.
-3. Vos actions connectées (scan, sync) passent par le serveur, qui interroge les bases externes à
-   votre place et garde les clés d'accès de son côté.
+3. Vos actions connectées (scan, recherche) interrogent les bases externes avec **vos jetons
+   d'accès** — ou avec les jetons Acervatim si vous êtes premium.
 
 > Pour le détail technique (architecture, API, sécurité), voir l'espace développeur :
 > [Le serveur Acervatim](../developpeur/backend.md).

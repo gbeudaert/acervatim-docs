@@ -27,7 +27,7 @@ de la publication.
 | Identifiant utilisateur (`sub` Google) | ✅ *(haché)* | ❌ | ❌ (requis) | Authentification | ✅ | ✅ |
 | Identifiant interne (UUID) | ✅ | ❌ | ❌ (requis) | Identification dans l'app | ✅ | ✅ |
 | Activité dans l'app (collections, items) | ✅ | ❌ | ❌ (cœur fonctionnel) | Stockage personnel | ✅ | ✅ |
-| Achats dans l'app (token d'achat) | ✅ | ❌ | ✅ (si premium) | Vérification abonnement | ✅ | ✅ |
+| Achats dans l'app | ❌ *(aucune offre payante à ce jour)* | — | — | — | — | — |
 | Jetons OAuth tiers | ✅ *(chiffrés)* | ❌ | ✅ (si service connecté) | Appel API en votre nom | ✅ | ✅ |
 | Informations financières | ❌ *(gérées par Google Play)* | — | — | — | — | — |
 | Localisation | ❌ | — | — | — | — | — |

@@ -8,6 +8,11 @@
 
 Statut : **partiellement exécuté** (2026-06-29). Révisé le 2026-06-28.
 
+> **Note (2026-07-03)** : document historique. Les révisions ultérieures de l'offre (modes
+> Offline / Connecté / Premium, retrait des cibles d'hébergement) sont pilotées par
+> [`sprints-conformite-offre.md`](sprints-conformite-offre.md) — les mentions Pi/NAS/AWS ci-dessous
+> décrivent l'état au moment de la consolidation, pas la doc actuelle.
+
 ## 0. État d'exécution
 
 **Fait (dépôt `acervatim-docs`, en local) :**

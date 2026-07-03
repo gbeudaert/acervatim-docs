@@ -22,9 +22,12 @@ L'utilisation de l'Application vaut acceptation des présentes CGU.
 
 ## 3. Description du service
 
-- Application Android **gratuite**, fonctionnant **hors-ligne par défaut**.
-- Un **mode connecté optionnel** (compte Google) ajoute synchronisation et enrichissement.
-- Un palier **premium** optionnel (Google Play Billing) étend quotas et fonctionnalités.
+- Application Android **gratuite**, fonctionnant **hors-ligne par défaut** (saisie manuelle, sans
+  serveur).
+- Un **mode connecté optionnel** (compte Google) ajoute l'enrichissement de métadonnées depuis des
+  bases spécialisées, avec les jetons d'accès fournis par l'utilisateur.
+- Un palier **premium** optionnel permettra d'utiliser les jetons d'accès Acervatim et, dans un
+  second temps, la synchronisation cloud des collections.
 
 ## 4. Compte utilisateur
 
@@ -32,10 +35,10 @@ L'utilisation de l'Application vaut acceptation des présentes CGU.
   [confidentialité](confidentialite.md)).
 - L'utilisateur peut exporter ses données et supprimer son compte à tout moment depuis l'Application.
 
-## 5. Premium et facturation _(à détailler)_
+## 5. Premium et facturation _(non applicable à ce jour)_
 
-- Souscription via Google Play ; conditions de renouvellement et de résiliation gérées par Google
-  Play. _(modalités, prix, durée à préciser)_
+- Aucun palier payant n'est commercialisé à ce jour. Cette section sera rédigée (modalités de
+  souscription, prix, durée, résiliation) avant l'ouverture du palier premium.
 
 ## 6. Propriété intellectuelle
 

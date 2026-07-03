@@ -14,6 +14,5 @@ Documents juridiques et obligatoires d'Acervatim.
 - [Mentions légales](mentions-legales.md) — éditeur, hébergeur *(à finaliser)*.
 - [Data Safety (Google Play)](data-safety.md) — déclaration de sécurité des données.
 
-> La politique de confidentialité publiée ici est la **version unique de référence**. Les anciennes
-> copies (`mvc/docs/confidentialite.md`, `acervus-backend/docs/politique-confidentialite.md`) doivent
-> pointer vers cette page ou être retirées.
+> La politique de confidentialité publiée ici est la **version unique de référence** : toute autre
+> copie doit pointer vers cette page ou être retirée.

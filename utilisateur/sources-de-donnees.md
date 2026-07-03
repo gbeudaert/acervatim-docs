@@ -33,10 +33,32 @@ Pour les mangas, vous pouvez **scanner le code-barres (ISBN)** d'un tome. Acerva
 2. retrouve la **série** correspondante et ses informations sur **MyAnimeList** ;
 3. vous propose la série pour **valider les tomes** d'un coup.
 
+### Comment l'app retrouve la bonne série
+
+La BnF connaît, pour chaque édition française, le **titre d'origine** du manga (celui sous lequel
+l'œuvre est référencée internationalement). Acervatim s'en sert pour interroger MyAnimeList, puis
+**confirme le résultat avec l'auteur** — pas seulement avec le titre. C'est ce double critère qui
+évite les confusions entre deux séries au nom proche : un titre peut ressembler à un autre, mais
+l'auteur tranche.
+
+- **Titres proches, bonne série.** Si le titre recherché est **contenu** dans celui d'une série
+  MyAnimeList *et* que l'auteur correspond, la correspondance est considérée comme **certaine**.
+- **Titres gardés en version originale.** Beaucoup de mangas conservent leur titre d'origine en France
+  (*Black Torch*, *One Piece*…). Même quand la BnF n'indique pas de titre d'origine séparé, Acervatim
+  sait retomber sur le titre français — à condition, là encore, que **l'auteur corresponde**.
+- **En cas de doute, rien n'est inventé.** Si aucun résultat ne correspond de façon fiable (ni par le
+  titre, ni par l'auteur), l'app garde les informations de la BnF et n'attribue pas de série au hasard.
+
 **Les éditions spéciales sont reconnues.** Si vous possédez par exemple *L'Attaque des Titans* en
 **édition Colossale** (un grand format qui regroupe plusieurs tomes de l'édition classique), le scan
 le détecte : Acervatim sait qu'il s'agit de la Colossale et **à quels tomes de l'édition standard**
 ce volume correspond. Vous ne mélangez donc pas une édition collector avec l'édition classique.
+
+### La langue du résumé
+
+Le **résumé** affiché est en **français** lorsque la BnF en fournit un pour l'ouvrage. Sinon, Acervatim
+utilise le résumé de MyAnimeList, qui est **en anglais** (MyAnimeList ne propose pas de résumés
+traduits). Vous pouvez toujours le **modifier** après coup.
 
 > Selon les ouvrages, l'information peut être partielle (séries en cours de publication, petits
 > éditeurs, catalogage incomplet). Dans ce cas, l'application pré-remplit ce qu'elle a trouvé et vous
@@ -48,8 +70,9 @@ Acervatim est conçu **privacy by design**. Concernant ces sources de données :
 
 - Les recherches portent sur **l'objet** (un disque, un livre), **jamais sur vous**. Aucun nom, email
   ni identifiant personnel n'est transmis à Discogs, MyAnimeList, la BnF ou TMDB.
-- Ces appels passent par **notre serveur**, qui sert d'intermédiaire ; les clés d'accès aux sources
-  restent côté serveur et ne transitent jamais par votre appareil.
+- En mode **connecté**, les sources sont interrogées avec **vos propres jetons d'accès** (que vous
+  renseignez dans les réglages) ; en **premium**, ce sont les jetons Acervatim, gardés côté serveur,
+  qui sont utilisés à votre place.
 - Vous restez **maître de vos données** : ce qui est récupéré sert uniquement à pré-remplir une fiche,
   que vous pouvez modifier ou ignorer.
 

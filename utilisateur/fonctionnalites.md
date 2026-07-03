@@ -17,17 +17,17 @@ Acervatim est en pré-alpha : l'application n'est pas encore publiée sur le Pla
 - Multi-artistes, vitesse de gravure, déduplication par code-barres et par ISBN.
 - Import/export JSON et CSV, **sauvegarde complète ZIP** avec jaquettes.
 - Thèmes Material You (marque, système, expressif), clair et sombre.
-- Côté serveur (capacités en place mais **pas encore activées dans l'application publiée** — voir « Court terme ») : authentification Google, synchronisation des collections, recherche externe unifiée (Discogs, MyAnimeList, BnF, TMDB), premium et invitations.
+- Côté serveur (capacités en place mais **pas encore activées dans l'application publiée** — voir « Court terme ») : authentification Google, recherche externe unifiée (Discogs, MyAnimeList, BnF, TMDB), synchronisation des collections (réservée au futur palier premium).
 
 ## Court terme
 
 - **Publication Play Store v1.0** : la version 100 % hors-ligne (vinyle + manga), sans compte ni achat intégré.
-- **Activation du mode connecté dans l'application** : connexion Google, synchronisation avec le serveur, recherche externe via l'endpoint unifié. La couche technique est en place côté app et côté serveur ; il reste la configuration de production et la finalisation de la synchronisation manga.
+- **Activation du mode connecté dans l'application** : connexion Google et recherche dans les bases externes avec **vos propres jetons d'accès** (*bring your own token*), sans synchronisation. La couche technique est en place côté app et côté serveur ; il reste la configuration de production et la gestion des jetons par source.
 - **Enrichissement automatique au scan** : recherche dans les bases externes (via le serveur) pour pré-remplir titre, artiste/auteur, jaquette et métadonnées — par code-barres pour le vinyle (Discogs) et **par ISBN pour le manga** (pivot **BnF → MyAnimeList**, qui retrouve la série et le tome scanné, éditions spéciales comprises — voir [D'où viennent les informations](sources-de-donnees.md)). Aujourd'hui le scan ne fait que pré-remplir le code-barres ; cet enrichissement reste à brancher dans l'app publiée.
 
 ## Moyen terme
 
-- **Premium** (via Google Play Billing) : synchronisation multi-appareils, sources d'enrichissement supplémentaires, exports avancés. Le socle gratuit reste complet pour un usage personnel.
+- **Premium** : enrichissement avec les **jetons Acervatim** (aucune clé personnelle à créer), puis **synchronisation cloud** des collections — d'abord comme sauvegarde, ensuite pour la consultation en ligne. Le socle gratuit reste complet pour un usage personnel.
 - **Nouvelles collections** : BD (vue à plat ou par séries au choix), LEGO, jeux de société, livres, films — chaque type avec sa source de métadonnées de référence (Rebrickable, BoardGameGeek, Google Books, TMDB…), routée par le serveur.
 - **Confort** : recherche dans la vue séries, transitions animées liste → détail, scan adapté automatiquement à la collection active, création de collections personnalisées depuis le tiroir.
 
@@ -35,7 +35,7 @@ Acervatim est en pré-alpha : l'application n'est pas encore publiée sur le Pla
 
 - Alerte « nouveau tome disponible » et vue des tomes manquants pour les séries suivies.
 - Statistiques de collection (valeur, répartition par genre, habitudes d'écoute).
-- Montée en charge du serveur (migration cloud) si l'usage le justifie — le schéma de données est prêt pour ce scénario.
+- Montée en charge du serveur si l'usage le justifie — le schéma de données est prêt pour ce scénario.
 
 ## Hors périmètre
 

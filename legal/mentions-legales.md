@@ -21,8 +21,7 @@ nav_order: 3
 
 ## Hébergement
 
-- **Backend** : auto-hébergé par l'éditeur sur **Raspberry Pi 4** (France) ; base de données MariaDB
-  sur NAS personnel. Voir [Déploiement Raspberry Pi / Podman](../developpeur/deploiement-raspberry-pi.md).
+- **Backend** : hébergé par l'éditeur (France). Voir [Déploiement du backend](../developpeur/deploiement.md).
 - **Documentation** : GitHub Pages _(GitHub, Inc. — à confirmer à la mise en ligne)_.
 
 ## Propriété intellectuelle

@@ -7,13 +7,12 @@ nav_order: 6
 
 # Publication Play Store
 
-Vue normalisée du processus de publication de l'application Android `app.acervatim` sur Google Play.
-Le **runbook opérationnel détaillé** (keystore, signature, captures, fiche de release) vit dans le
-dépôt applicatif : [`mvc/docs/travail/playstore-deployment.md`](../../mvc/docs/travail/playstore-deployment.md).
+Processus de publication de l'application Android `app.acervatim` sur Google Play : modèle de
+distribution, prérequis, cohérence légale, versioning et rappels de sécurité.
 
 ## Modèle de distribution
 
-- Application **gratuite**, sans achat bloquant (le premium est optionnel, via Google Play Billing).
+- Application **gratuite**, sans achat bloquant ni publicité.
 - Publiée via **Google Play Console**, format **Android App Bundle (`.aab`)** signé.
 - **Play App Signing** activé : Google gère la clé de signature de distribution ; la clé d'upload est
   conservée par l'éditeur (jamais commitée).
@@ -29,8 +28,8 @@ dépôt applicatif : [`mvc/docs/travail/playstore-deployment.md`](../../mvc/docs
 
 ## Cohérence légale
 
-L'application **n'est plus 100 % hors-ligne** depuis l'ajout de Google Sign-In + synchronisation
-optionnels : la déclaration **Data Safety** et la **politique de confidentialité** doivent refléter
+L'application **n'est plus 100 % hors-ligne** depuis l'ajout du mode connecté optionnel (Google
+Sign-In) : la déclaration **Data Safety** et la **politique de confidentialité** doivent refléter
 les données traitées en mode connecté. Le tableau de correspondance Google Play est tenu dans la
 [politique de confidentialité § annexe](../legal/confidentialite.md).
 
@@ -49,5 +48,4 @@ les données traitées en mode connecté. Le tableau de correspondance Google Pl
 
 ## Voir aussi
 
-- Runbook complet : [`mvc/docs/travail/playstore-deployment.md`](../../mvc/docs/travail/playstore-deployment.md).
 - [Authentification Google](auth-google.md) · [Politique de confidentialité](../legal/confidentialite.md) · [Data Safety](../legal/data-safety.md).

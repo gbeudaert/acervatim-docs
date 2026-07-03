@@ -7,9 +7,8 @@ nav_order: 3
 
 # Référence API `/v1`
 
-Vue normalisée du contrat HTTP. **Source de vérité** : le code et l'[`openapi.json`](../../acervus-backend/openapi.json)
-généré au bootstrap, ainsi que la spec détaillée
-[`api-mobile-spec.md`](../../acervus-backend/docs/travail/api-mobile-spec.md) du dépôt backend.
+Vue normalisée du contrat HTTP. **Source de vérité** : le code du dépôt `acervatim-backend` et son
+`openapi.json` généré au bootstrap.
 En dev (`NODE_ENV !== 'production'`), un Swagger UI est exposé sur `GET /docs`.
 
 ## Conventions transverses
@@ -134,4 +133,4 @@ En dev (`NODE_ENV !== 'production'`), un Swagger UI est exposé sur `GET /docs`.
 ## Voir aussi
 
 - [Le serveur Acervatim](backend.md) · [Architecture](architecture.md).
-- Contrat brut : [`openapi.json`](../../acervus-backend/openapi.json) · [`api-mobile-spec.md`](../../acervus-backend/docs/travail/api-mobile-spec.md).
+- Contrat brut : `openapi.json` (dépôt `acervatim-backend`).

@@ -4,29 +4,26 @@
 toute la documentation **normalisée** des dépôts Acervatim, organisée par public cible.
 
 > Acervatim — application Android de gestion de collections (vinyles, mangas…), *offline-first*, avec
-> un backend optionnel d'enrichissement et de synchronisation.
+> un mode connecté optionnel d'enrichissement de métadonnées.
 
 ## Structure
 
 | Espace | Dossier | Contenu |
 |---|---|---|
 | 👤 Utilisateur | [`utilisateur/`](utilisateur/) | Présentation, fonctionnalités, sources de données, mode connecté. |
-| 🛠️ Développeur | [`developpeur/`](developpeur/) | Architecture, backend, référence API, auth Google, déploiement Pi, pivot ISBN, Play Store. |
+| 🛠️ Développeur | [`developpeur/`](developpeur/) | Architecture, backend, référence API, auth Google, déploiement, pivot ISBN, Play Store. |
 | ⚖️ Légal | [`legal/`](legal/) | Confidentialité (canonique), CGU, mentions légales, Data Safety. |
 
 La page d'accueil du site est [`index.md`](index.md).
 
 ## Périmètre
 
-Cette doc est **normalisée et curée** : elle ne contient pas les artefacts de travail (contexte IA,
-revues de code, brouillons, sprints). Ceux-ci restent dans les dépôts applicatifs :
+Cette doc est **normalisée, curée et auto-portante** : elle ne contient pas d'artefacts de travail
+(contexte IA, revues de code, brouillons, sprints) et ne renvoie vers aucune documentation interne
+des dépôts applicatifs.
 
-- `acervus-backend/docs/interne/` — sprints backend + matière de travail.
-- `mvc/docs/interne/` — sprints app + matière de travail.
-
-Le **code reste la source de vérité** ; les pages renvoient aux dépôts `mvc` et `acervus-backend`
-pour le détail fin. Voir le [plan de consolidation](plan-consolidation-documentation.md) pour le
-contexte de la migration.
+Le **code reste la source de vérité** : en cas de doute, les dépôts `acervatim-app` (application)
+et `acervatim-backend` (API) font foi.
 
 ## Développement local
 
@@ -40,5 +37,5 @@ Sur GitHub Pages : Settings → Pages → branche `main`, racine du dépôt.
 
 ## Statut
 
-Dépôt **en cours de constitution** (consolidation de la doc auparavant éclatée entre `mvc/docs` et
-`acervus-backend/docs`). Voir [`plan-consolidation-documentation.md`](plan-consolidation-documentation.md).
+Dépôt **en cours de constitution** (consolidation de la doc auparavant éclatée entre les dépôts
+applicatifs). Voir [`plan-consolidation-documentation.md`](plan-consolidation-documentation.md).

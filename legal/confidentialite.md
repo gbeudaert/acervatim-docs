@@ -76,15 +76,10 @@ Ces jetons sont **chiffrés en base avec AES-256-GCM**. La clé de chiffrement n
 
 ### 3.4 Données d'abonnement premium
 
-Si vous souscrivez à un abonnement premium via Google Play Billing :
-
-| Donnée                          | Finalité                                                  | Conservation                              |
-| ------------------------------- | --------------------------------------------------------- | ----------------------------------------- |
-| Jeton d'achat Google (`purchaseToken`) | Vérification du statut auprès de Google Play API   | Durée de l'abonnement + 30 jours          |
-| Identifiant produit (`productId`)| Identifier la formule souscrite                          | Durée de l'abonnement + 30 jours          |
-| Statut, date d'expiration       | Déterminer si vous êtes encore premium                    | Durée de l'abonnement + 30 jours          |
-
-Aucune information de paiement (numéro de carte, identifiants bancaires) **ne transite ni n'est stockée** par l'Application. Tout le flux de paiement est géré directement par Google Play.
+Aucune offre premium n'est commercialisée à ce jour : **aucune donnée d'achat ou d'abonnement n'est
+collectée**. Cette section sera complétée avant l'ouverture éventuelle d'un palier premium. En tout
+état de cause, aucune information de paiement (numéro de carte, identifiants bancaires) **ne
+transitera ni ne sera stockée** par l'Application.
 
 ### 3.5 Données techniques et de fonctionnement
 
@@ -105,8 +100,6 @@ Les logs **ne contiennent jamais** votre identifiant Google en clair ni votre id
 | Permettre votre connexion à l'Application                      | Exécution du contrat (art. 6.1.b)                     |
 | Stocker et synchroniser vos collections                        | Exécution du contrat (art. 6.1.b)                     |
 | Connecter vos comptes Discogs / MAL / TMDB et appeler ces API en votre nom | Consentement explicite (art. 6.1.a), retirable à tout moment |
-| Gérer votre abonnement premium                                 | Exécution du contrat (art. 6.1.b)                     |
-| Accorder un accès premium via code d'invitation                | Exécution du contrat (art. 6.1.b)                     |
 | Conserver des logs pour sécurité                               | Intérêt légitime (art. 6.1.f)                          |
 
 ---
@@ -119,12 +112,12 @@ Les destinataires techniques (sous-traitants au sens de l'article 28 RGPD) sont 
 
 | Destinataire           | Rôle                                                         | Localisation des serveurs          |
 | ---------------------- | ------------------------------------------------------------ | ---------------------------------- |
-| **Google LLC**         | Authentification (Google Sign-In), facturation premium (Google Play Billing) | États-Unis (CCT et DPA applicables) |
+| **Google LLC**         | Authentification (Google Sign-In)                            | États-Unis (CCT et DPA applicables) |
 | **Discogs**            | Données enrichies de vinyles (si vous connectez votre compte) | États-Unis                         |
 | **MyAnimeList (MAL)**  | Données enrichies de mangas (si vous connectez votre compte) | Japon                              |
 | **TMDB (The Movie Database)** | Données enrichies de films (si vous connectez votre compte) | États-Unis                  |
 
-Les serveurs hébergeant les données de l'Application elle-même (collections, items, jetons chiffrés) sont **localisés en France**, sur une infrastructure auto-hébergée par l'éditeur. Aucune externalisation cloud n'est en place à ce jour.
+Les serveurs hébergeant les données de l'Application elle-même (collections, items, jetons chiffrés) sont **localisés en France**, sous le contrôle direct de l'éditeur.
 
 ### Transferts hors Union européenne
 
@@ -141,13 +134,10 @@ Les transferts éventuels vers des destinataires établis hors UE (Google, Disco
 | --------------------------------------- | ---------------------------------------------------- |
 | Compte utilisateur, collections, items  | Jusqu'à suppression du compte par l'utilisateur      |
 | Jetons OAuth tiers (Discogs, MAL, TMDB) | Jusqu'à révocation ou suppression du compte          |
-| Données d'abonnement                    | Durée de l'abonnement + 30 jours après expiration    |
 | Cache API                               | 30 jours maximum, purgé automatiquement              |
 | Logs serveur                            | 30 jours maximum                                     |
-| Codes d'invitation non utilisés        | Jusqu'à expiration définie par l'éditeur, puis purge |
-| Traces de claim d'invitation            | Jusqu'à suppression du compte                        |
 
-Une fois votre compte supprimé, toutes les données associées (collections, items, jetons OAuth, statut premium, traces d'invitation) sont effacées **automatiquement et de manière atomique** grâce aux contraintes de suppression en cascade en base de données.
+Une fois votre compte supprimé, toutes les données associées (collections, items, jetons OAuth) sont effacées **automatiquement et de manière atomique** grâce aux contraintes de suppression en cascade en base de données.
 
 ---
 
@@ -242,7 +232,7 @@ Pour toute question, demande d'exercice de droits ou réclamation :
 | Identifiant utilisateur (`sub` Google) | ✅ *(haché)* | ❌ | ❌ (requis) | Authentification                | ✅                 | ✅           |
 | Identifiant utilisateur interne (UUID) | ✅       | ❌        | ❌ (requis) | Identification dans l'Application | ✅                 | ✅           |
 | Données d'activité dans l'app (collections, items) | ✅ | ❌ | ❌ (cœur fonctionnel) | Stockage personnel | ✅ | ✅ |
-| Achats dans l'app (token d'achat)    | ✅         | ❌        | ✅ (si premium souscrit) | Vérification abonnement | ✅                 | ✅           |
+| Achats dans l'app                    | ❌ *(aucune offre payante à ce jour)* | — | — | — | — | — |
 | Jetons OAuth tiers                   | ✅ *(chiffrés)* | ❌    | ✅ (si service connecté) | Appel API en votre nom | ✅          | ✅           |
 | Informations financières             | ❌ *(gérées par Google Play uniquement)* | — | — | — | — | — |
 | Localisation                         | ❌         | —         | —           | —                                 | —                  | —            |

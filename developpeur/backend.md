@@ -26,7 +26,7 @@ Le serveur remplit cinq rôles, par ordre de priorité :
 2. **Cache partagé.** Une recherche effectuée par un utilisateur bénéficie aux suivants : réponses plus rapides et charge réduite sur les API tierces.
 3. **Throttling centralisé.** Un mécanisme de *token bucket* par utilisateur et par source protège les quotas des API externes (Discogs limite par exemple à 60 requêtes/minute).
 4. **OAuth complexes côté serveur.** Certains protocoles (Discogs OAuth 1.0a, avec signatures HMAC) ne peuvent pas être implémentés proprement sur un appareil sans y embarquer des secrets. Le serveur gère ces flux et stocke les jetons **chiffrés** (AES-256-GCM).
-5. **Services de compte.** Synchronisation des collections entre appareils, statut premium (Google Play Billing + codes d'invitation), export et suppression des données.
+5. **Services de compte.** Synchronisation des collections (palier premium à terme), statut premium, export et suppression des données.
 
 ## Architecture
 
@@ -49,10 +49,7 @@ Le serveur remplit cinq rôles, par ordre de priorité :
 | Base de données | MariaDB, via l'ORM Prisma |
 | Authentification | Google Sign-In côté app → JWT interne RS256 (validité 7 jours) |
 | Chiffrement | AES-256-GCM pour les jetons OAuth tiers |
-| Hébergement V1 | Auto-hébergé sur **Raspberry Pi 4 (arm64) sous Podman** ; base MariaDB sur le NAS — coût opérationnel quasi nul, contrôle total |
-| Évolution V2 | Migration cloud possible si l'usage croît, à schéma identique |
-
-> Note : le NAS Synology (armv7l) envisagé initialement a été abandonné — Prisma exige une plateforme 64 bits. La V1 tourne donc sur Raspberry Pi 4 (conteneur Podman géré par Quadlet), la base MariaDB restant hébergée sur le NAS.
+| Déploiement | Conteneur **Podman** derrière un reverse proxy TLS ; base MariaDB hébergée séparément — voir [Déploiement du backend](deploiement.md) |
 
 ## Confidentialité : privacy by design
 
@@ -96,9 +93,8 @@ Le modèle serveur est le miroir du modèle local de l'application :
 
 ### Premium et invitations
 
-- `POST /v1/subscriptions/verify` — validation d'un achat Google Play Billing (vérification serveur à serveur, webhook temps réel + re-vérification périodique).
-- `POST /v1/invitations/redeem` — codes d'invitation donnant accès au premium (bêta-testeurs, offres).
-- Le statut premium effectif combine abonnement **ou** invitation, et conditionne les quotas et les fonctionnalités avancées.
+- `POST /v1/subscriptions/verify` et `POST /v1/invitations/redeem` — endpoints de gestion du statut premium présents dans le code ; leur périmètre fonctionnel est en cours de redéfinition (voir le plan de mise en conformité de l'offre).
+- Le statut premium conditionne les quotas et les fonctionnalités qui lui sont réservées.
 
 ### Qualité de l'API
 
@@ -108,7 +104,7 @@ Le modèle serveur est le miroir du modèle local de l'application :
 - Validation stricte des entrées (schémas Zod) : toute donnée inattendue est rejetée.
 - Rate limiting global par IP en plus du throttling par source.
 - Documentation **OpenAPI** générée automatiquement depuis le code (interface Swagger disponible hors production).
-- `GET /health` — supervision (état du service ; un check de readiness incluant un ping de la base est prévu — sprint Ops).
+- `GET /health` — supervision (état du service ; un check de readiness incluant un ping de la base est prévu).
 
 ## Ce que le serveur ne fait pas
 
@@ -120,5 +116,5 @@ Le modèle serveur est le miroir du modèle local de l'application :
 
 - [Architecture](architecture.md) — vue système et flux.
 - [Référence API](api-reference.md) — contrat `/v1` détaillé.
-- [Authentification Google](auth-google.md) · [Déploiement Raspberry Pi / Podman](deploiement-raspberry-pi.md).
+- [Authentification Google](auth-google.md) · [Déploiement du backend](deploiement.md).
 - Vue utilisateur : [Mode connecté](../utilisateur/mode-connecte.md).

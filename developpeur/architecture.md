@@ -15,23 +15,18 @@ les liens vers chaque dépôt (cf. [Accueil](../index.md)).
 ```
             ┌─────────────────────────────┐
             │        Application           │   Kotlin · Compose · Room (offline-first)
-            │            (mvc)             │   Source de vérité LOCALE par défaut
+            │       (acervatim-app)        │   Source de vérité LOCALE par défaut
             └──────────────┬──────────────┘
                            │  HTTPS REST /v1/*  ·  Bearer JWT interne
                            ▼
             ┌─────────────────────────────┐
             │          Backend            │   NestJS · Prisma · MariaDB
-            │      (acervus-backend)      │   Node 24 · déployé sur Raspberry Pi 4 / NAS
+            │    (acervatim-backend)      │   Node 24 · conteneurisé
             └───────┬──────────────┬──────┘
                     │              │
-   Google Identity  │              │  Proxy bases externes (clés côté serveur)
+   Google Identity  │              │  Proxy bases externes
    (vérif. id_token)│              ▼
                     │     Discogs · Google Books · AniList · TMDB …
-                    ▼
-            ┌─────────────────────────────┐
-            │   Infra AWS (FUTURE)        │   OpenTofu — non activée en v1
-            │     (acervatim-infra)       │   prend le relais à la migration cloud
-            └─────────────────────────────┘
 ```
 
 **Principe directeur : offline-first.** L'app est 100 % utilisable sans compte ni réseau (toutes les
@@ -40,59 +35,25 @@ métadonnées ; ça ne conditionne jamais l'usage de base.
 
 ## Composants
 
-### Application (`mvc`)
+### Application (`acervatim-app`)
 - Single-activity + Compose, architecture en couches `ui / domain / data`.
 - Persistance locale **Room** (`acervatim.db`) : `records`, `series`, `artists`, `collections` + tables de jointure.
 - Couche réseau **Retrofit** (`data/remote/`) : `AuthApi`, `AcervatimApi`, intercepteurs (Bearer + `problem+json` → `ApiException`).
-- Détail : [`mvc/docs/contexte-global.md`](../../mvc/docs/contexte-global.md).
 
-### Backend (`acervus-backend`)
+### Backend (`acervatim-backend`)
 - API REST versionnée `/v1/*`, NestJS + Prisma + MariaDB.
 - Rôles : authentification (Google → JWT interne), CRUD des collections/items/nodes, **proxy de recherche externe** unifiée, quotas/premium, invitations.
-- Contrat : [Référence API](api-reference.md) · [`openapi.json`](../../acervus-backend/openapi.json).
+- Contrat : [Référence API](api-reference.md) · `openapi.json` (dépôt `acervatim-backend`).
 
-### Infra (`acervatim-infra`)
-- IaC OpenTofu pour **AWS** — **cible de migration future**. La v1 ne l'utilise pas (backend sur Pi/NAS).
+## Déploiement
 
-## Hébergement V1 — Raspberry Pi 4 + Podman
+Le backend est déployé en **conteneur** (Podman rootless, unité **Quadlet** systemd), derrière un
+reverse proxy TLS ; la base MariaDB est hébergée **séparément** du conteneur applicatif.
 
-La V1 est **auto-hébergée**, sans cloud. Le plan AWS serverless (DynamoDB + Lambda) décrit dans
-d'anciens docs n'a **jamais été déployé** : il reste une cible d'évolution (`acervatim-infra`).
-
-> **Pourquoi pas le NAS Synology ?** Le NAS (armv7l, 32 bits) a été abandonné comme hôte applicatif :
-> Prisma exige une plateforme 64 bits. Le NAS conserve un seul rôle : **héberger la base MariaDB**.
-
-```
-        Internet
-           │  HTTPS (TLS)
-           ▼
-   [ Reverse proxy ]
-           │  http://localhost:3000
-           ▼
-┌───────────────────────────┐        ┌─────────────────────────┐
-│  Raspberry Pi 4 (arm64)   │        │   NAS Synology          │
-│  Podman rootless          │  3306  │                         │
-│  └─ conteneur acervatim-  │───────▶│   MariaDB 10.5+         │
-│     api (NestJS + Prisma) │  mysql │   (base `acervatim`)    │
-│     géré par Quadlet      │        │                         │
-└───────────────────────────┘        └─────────────────────────┘
-```
-
-| Élément | Choix V1 |
-|---|---|
-| Hôte applicatif | Raspberry Pi 4, **arm64**, Node 24 LTS |
-| Conteneurisation | **Podman rootless**, unité **Quadlet** systemd (`acervatim-api.container`) |
-| Image | construite sur le Pi (`podman build --platform linux/arm64`) |
-| Base de données | **MariaDB sur le NAS** (pas de conteneur DB en prod) ; `DATABASE_URL` pointe le NAS |
-| Migrations Prisma | cible de build dédiée (`--target migrate`) lancée à la main avant un déploiement schéma |
-| Healthcheck | `/health` défini dans l'image, planifié par un timer systemd transient |
-| Persistance du service | `loginctl enable-linger` pour survivre à la fermeture de session SSH |
-| Coût | quasi nul (matériel déjà possédé, pas de facture cloud) |
-
-**Détail du déploiement** : voir [Déploiement Raspberry Pi / Podman](deploiement-raspberry-pi.md).
-**Source de vérité** : le dépôt `acervus-backend` —
-[`deploy/acervatim-api.container`](../../acervus-backend/deploy/acervatim-api.container) (Quadlet
-commenté pas à pas) et l'[index des sprints backend](../../acervus-backend/docs/interne/sprints/).
+**Détail du déploiement** (build de l'image, unité, secrets, migrations) : voir
+[Déploiement du backend](deploiement.md).
+**Source de vérité** : `deploy/acervatim-api.container` (unité Quadlet commentée pas à pas) dans le
+dépôt `acervatim-backend`.
 
 ## Flux clés
 
@@ -101,11 +62,11 @@ commenté pas à pas) et l'[index des sprints backend](../../acervus-backend/doc
 2. App → Backend : échange `id_token` contre un **JWT interne** (le backend vérifie le token Google, hash du `sub` avec pepper).
 3. App : JWT stocké chiffré (`TokenStore` / EncryptedSharedPreferences), injecté en `Authorization: Bearer` par l'`AuthInterceptor`.
 
-### 2. Synchronisation (mode connecté)
+### 2. Synchronisation (palier premium à terme)
 - Modèle **miroir** : chaque entité locale porte `remoteId`, `syncState`, `serverUpdatedAt`.
 - Push/pull *last-write-wins* (`SyncManager`), via WorkManager + déclenchement manuel depuis l'écran Compte.
 - Quota dépassé (`402`) → **sync partielle** (pas un échec), jauges affichées côté app.
-- Limites actuelles : push manga bloqué (source provider requise), champs *app-only* non synchronisés (cf. sprint 11).
+- Limites actuelles : push manga bloqué (source provider requise), champs *app-only* non synchronisés.
 
 ### 3. Enrichissement au scan
 1. App : scan EAN/UPC (vinyle) ou ISBN (manga) via ML Kit.
@@ -113,7 +74,6 @@ commenté pas à pas) et l'[index des sprints backend](../../acervus-backend/doc
 3. Backend : route vers la bonne source (Discogs pour le vinyle ; **MyAnimeList + BnF** pour le manga, via un pivot ISBN → titre original ; TMDB pour les films), cache + quotas, renvoie un **`UnifiedItem`**.
 4. App : pré-remplit le formulaire d'ajout ; le code-barres scanné est persisté sur l'item.
 - Détail dev (provenance des champs, flux scan, pivot ISBN manga) : [Sources de données & pivot ISBN](sources-et-pivot-isbn.md).
-- Détail app (wiring Android) : [`mvc/docs/travail/guide-scan-enrichissement-app.md`](../../mvc/docs/travail/guide-scan-enrichissement-app.md).
 
 ## Modèle de données — façade
 
@@ -135,10 +95,9 @@ contrat → conservés en local, non synchronisés (arbitrage produit à venir).
 - **Record / Series** : équivalents côté app (façade).
 - **UnifiedItem** : résultat normalisé de `/v1/search`, indépendant de la source externe.
 - **SyncState** : `LOCAL_ONLY` · `DIRTY` · `SYNCED` — état de synchro d'une ligne locale.
-- **Mode connecté** : session active (JWT) → sync + enrichissement. Distinct du **premium** (quotas serveur, pas un palier d'UI).
+- **Mode connecté** : session active (JWT) → enrichissement avec les jetons de l'utilisateur (*bring your own token*). Le **premium** ajoute l'usage des jetons Acervatim et, à terme, la synchronisation cloud.
 - **Track A / Track B** : phase offline-first publiable (A, terminée) puis backend & migration des providers (B, en cours).
 
 ## Voir aussi
 
-- Statut détaillé par sprint (app) : [`sprint-realises.md`](../../mvc/docs/interne/sprint-realises.md).
 - Accueil de la documentation : [index](../index.md).

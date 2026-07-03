@@ -15,3 +15,6 @@ Thumbs.db
 
 # Matiere confidentielle eventuelle (cf. plan de consolidation)
 private/
+
+# Docs de travail locales, non versionnees
+sprints-conformite-offre.md

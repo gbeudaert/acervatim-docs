@@ -11,7 +11,9 @@ nav_order: 1
 **Acervatim** est une application Android libre (Apache 2.0) pour cataloguer vos collections. Elle
 démarre avec les **disques vinyles** et les **mangas**, et son architecture est pensée pour s'étendre
 à d'autres types (BD, LEGO, jeux de société, livres, films…). L'application est **100 % hors-ligne par
-défaut** ; un **backend optionnel** ajoute l'enrichissement de métadonnées et la synchronisation.
+défaut** ; le **mode connecté** optionnel ajoute l'enrichissement de métadonnées depuis des bases
+spécialisées, avec vos propres jetons d'accès ; le palier **premium** permet d'utiliser les jetons
+Acervatim et, dans un second temps, la synchronisation cloud.
 
 ![Statut](https://img.shields.io/badge/statut-pre--alpha-orange)
 ![Plateforme](https://img.shields.io/badge/platform-Android%207%2B-blue)
@@ -44,10 +46,9 @@ Cette documentation est organisée par **public** :
 
 | Dépôt | Rôle | Stack |
 |-------|------|-------|
-| `mvc` | Application Android | Kotlin · Jetpack Compose · Room · Hilt · Retrofit |
-| `acervus-backend` | Backend / API | Node 24 · NestJS 10 · Prisma 6 · MariaDB |
+| `acervatim-app` | Application Android | Kotlin · Jetpack Compose · Room · Hilt · Retrofit |
+| `acervatim-backend` | Backend / API | Node 24 · NestJS 10 · Prisma 6 · MariaDB |
 | `acervatim-docs` | **Cette documentation** | Markdown · Jekyll (just-the-docs) |
-| `acervatim-infra` | Infra AWS (cible future, non activée) | OpenTofu · AWS |
 
 > Le code fait toujours foi : cette documentation est la vue **normalisée**, les dépôts applicatifs
 > restent la source de vérité pour les détails fins.

@@ -5,8 +5,8 @@
 title: Acervatim
 description: >-
   Documentation centrale d'Acervatim : application Android de gestion de
-  collections (vinyles, mangas...), 100 % hors-ligne par defaut, avec un backend
-  optionnel d'enrichissement et de synchronisation.
+  collections (vinyles, mangas...), 100 % hors-ligne par defaut, avec un mode
+  connecte optionnel d'enrichissement de metadonnees.
 lang: fr
 
 remote_theme: just-the-docs/just-the-docs
@@ -19,15 +19,17 @@ color_scheme: light
 
 # Liens de navigation auxiliaires (coin superieur droit).
 aux_links:
-  "Application (mvc)": "https://github.com/gbeudaert/Acervus"
-  "Backend (acervus-backend)": "https://github.com/gbeudaert/acervatim-backend"
+  "Application (acervatim-app)": "https://github.com/gbeudaert/acervatim-app"
+  "Backend (acervatim-backend)": "https://github.com/gbeudaert/acervatim-backend"
 
 footer_content: >-
   Acervatim - documentation centrale. Application sous licence Apache 2.0.
 
-# Documents de travail / plan, non publies comme pages du site.
+# Documents de travail / plan / doc agent IA, non publies comme pages du site.
 exclude:
+  - agent/
   - plan-consolidation-documentation.md
+  - sprints-conformite-offre.md
   - private/
   - vendor/
   - Gemfile

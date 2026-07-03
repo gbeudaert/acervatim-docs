@@ -11,9 +11,8 @@ Comment Acervatim authentifie un utilisateur : l'app obtient un `id_token` Googl
 **vérifie**, hache le `sub` Google et émet un **JWT interne**. Cette page couvre le setup Google Cloud
 (app + backend) et le flux de vérification.
 
-> **Source de vérité** : dépôt `acervus-backend` —
-> [`docs/travail/setup-google-cloud-oauth.md`](../../acervus-backend/docs/travail/setup-google-cloud-oauth.md)
-> (setup détaillé, SHA-1, Play App Signing) et `mvc` côté app.
+> **Source de vérité** : le code des dépôts `acervatim-backend` (vérification du token, config
+> OAuth serveur) et `acervatim-app` (intégration Credential Manager).
 
 ## Modèle — deux clients OAuth, un écran de consentement
 
