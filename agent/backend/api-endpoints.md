@@ -59,7 +59,8 @@
 | Route | Controller | Notes |
 |---|---|---|
 | `GET /v1/search` | `search/search.controller.ts` | `type` obligatoire ; `q` XOR `barcode` ; routé vers l'adapter du type (Discogs pour vinyl, MAL/BnF pour manga) via `SOURCE_ADAPTERS` — voir [../transverse/sources-externes.md](../transverse/sources-externes.md) |
-| `GET /v1/search/edition-mapping` | idem | `title` (+ `edition`) → énumération des tomes d'une édition via BnF (`common/sources/bnf/bnf.service.ts`) |
+| `GET /v1/search/edition-mapping` | idem | `title` (+ `edition`) → énumération des tomes d'une édition via BnF (`common/sources/bnf/bnf.service.ts`) ; chaque tome porte `coverUrl` (jaquette Google Books en cache, sinon `null`) |
+| `GET /v1/search/cover` | idem | `isbn` → `{ coverUrl }` : résout la jaquette d'un tome par ISBN via Google Books (`common/sources/googlebooks/googlebooks.service.ts`) et alimente le cache |
 
 ## OAuth externe (comptes user Discogs / MAL / TMDB)
 

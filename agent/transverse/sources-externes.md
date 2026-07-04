@@ -9,6 +9,7 @@
 |---|---|---|---|
 | **Discogs** | vinyl | OAuth 1.0a (compte user) | Recherche texte + barcode (`database/search?barcode=`), métadonnées albums |
 | **MyAnimeList (MAL)** | manga | OAuth2 PKCE (compte user) | Métadonnées séries (le nœud série porte la source MAL) |
+| **Google Books** | manga (livre) | Clé API optionnelle (`GOOGLE_BOOKS_API_KEY`) | **Jaquette par ISBN/tome** (seule source par volume — MAL n'a que le visuel de série) ; expose aussi `description` (résumé par édition) |
 | **TMDB** | movie (futur) | API key / flow dédié | Prévu pour les films |
 | **BnF (SRU, sans auth)** | manga | Aucune (API publique) | Pivot **ISBN → série/tome FR** ; énumération des tomes d'une édition (`edition-mapping`) |
 
@@ -32,6 +33,15 @@ ISBN scanné → BnF (notice tome FR : titre série, n° tome, mention d'éditio
 ```
 
 Doc de conception : [../../developpeur/sources-et-pivot-isbn.md](../../developpeur/sources-et-pivot-isbn.md).
+
+## Jaquettes par tome (Google Books)
+
+MAL ne fournit qu'une illustration **de série** (`main_picture`) ; la BnF est bibliographique (aucune image). La seule source de jaquette **par volume** est **Google Books**, interrogée **par ISBN** :
+
+- Service `common/sources/googlebooks/googlebooks.service.ts` : `resolveCover(isbn)` (réseau, best-effort, cache positif 90 j / négatif 7 j) et `cachedCover(isbn)` (lecture cache-only). Réutilise `HttpClientService` + `ApiCacheService` + `TokenBucketService` comme la BnF ; module `@Global`.
+- `GET /v1/search/cover?isbn=` → `{ coverUrl }` : résout **et** met en cache (source de vérité de la résolution).
+- `GET /v1/search/edition-mapping` : chaque tome porte désormais `coverUrl`, peuplé **depuis le cache uniquement** (aucun appel externe pendant l'énumération → latence inchangée ; le cache est alimenté par `/cover`).
+- Google Books expose aussi `volumeInfo.description` (résumé par édition, HTML) et `averageRating`, mais **ne remplace pas MAL** : il n'a aucune notion de **série** (pas de `num_volumes`, pas de statut de publication, pas d'agrégation série). MAL reste la source du **nœud série** ; Google Books enrichit au **tome** (jaquette, éventuellement résumé).
 
 ## OAuth utilisateur (connexion de comptes externes)
 

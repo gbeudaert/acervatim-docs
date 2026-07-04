@@ -19,7 +19,7 @@ Cette page explique **quelles sources** sont utilisées et **ce que ça implique
 | Type | Source(s) | Ce qu'on y trouve |
 |---|---|---|
 | **Vinyles / disques** | [Discogs](https://www.discogs.com) | Album, artiste(s), année, pochette, label — recherche par texte **ou par code-barres** (EAN). |
-| **Mangas** | [MyAnimeList](https://myanimelist.net) + [Bibliothèque nationale de France (BnF)](https://catalogue.bnf.fr) | L'**œuvre** (synopsis, démographie, note, auteur) côté MyAnimeList ; l'**édition française** (éditeur, tome, ISBN) côté BnF — recherche **par ISBN**. |
+| **Mangas** | [MyAnimeList](https://myanimelist.net) + [Bibliothèque nationale de France (BnF)](https://catalogue.bnf.fr) + [Google Books](https://books.google.com) | L'**œuvre** (synopsis, démographie, note, auteur) côté MyAnimeList ; l'**édition française** (éditeur, tome, ISBN) côté BnF ; la **jaquette de chaque tome** côté Google Books (par ISBN) — recherche **par ISBN**. |
 | **Films** | [TMDB](https://www.themoviedb.org) | Titre, affiche, année, synopsis. |
 
 > L'enrichissement est **optionnel** et **à votre initiative** : l'application reste pleinement
