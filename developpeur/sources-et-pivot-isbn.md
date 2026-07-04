@@ -27,6 +27,20 @@ Chaque type média est servi par un **adapter** (`SourceAdapter`) :
 
 Code : `src/common/sources/` et `src/oauth/providers/` (dépôt `acervatim-backend`).
 
+## Vue d'ensemble : trois sources pour un manga
+
+À partir d'un seul **ISBN**, trois sources se répartissent le travail — chacune à sa granularité :
+
+| Source | Rôle | Granularité |
+|---|---|---|
+| **BnF** (SRU) | identifie le tome (titre de série FR, n° de tome, éditeur, ISBN) et **énumère tous les tomes** d'une édition | tome / édition |
+| **MyAnimeList** | **pivot série** : métadonnées d'ensemble attachées au nœud série (synopsis, statut, note, nb de tomes, visuel de série) | série |
+| **Google Books** | **jaquette par tome** (par ISBN) — seule source d'image par volume | tome |
+
+BnF + MAL forment le **pivot ISBN → série** (étapes A→D ci-dessous) ; **Google Books** est un
+**enrichissement complémentaire au tome** (jaquettes), sans aucune notion de série — il ne remplace
+donc pas MAL. Détails : [Jaquettes par tome](#jaquettes-par-tome-google-books).
+
 ## Le problème : MyAnimeList ne connaît pas les ISBN
 
 MyAnimeList (API v2) **n'a aucun lookup par ISBN**, n'indexe que des titres **romaji / anglais /
@@ -169,13 +183,46 @@ C'est le pivot BnF qui rend les éditions spéciales correctes :
 
 ### Ce que l'app fait des données par tome
 
-Chaque `EditionTome` porte `editionVolume`, `isbn`, `titleFr` **et `sourceVolumeRange`** (454$h). À
-l'import, l'app crée un tome (`Record`) et **stocke dans ses extras** l'édition (205), l'éditeur et la
-plage source (`sourceVolumeRange`). Le **détail d'un tome manga** (écran dédié) affiche alors n° de
-tome, édition, éditeur, ISBN, et le libellé dérivé « **contient les tomes 1 à 3** » pour les éditions
-compilées. Le **résumé** montré est celui de la **série** (`Series.synopsis`) : les sources n'exposent
-**pas de synopsis par tome** (MAL n'a qu'un résumé d'œuvre, la BnF ne met quasi jamais de 330 par
-volume).
+Chaque `EditionTome` porte `editionVolume`, `isbn`, `titleFr`, `sourceVolumeRange` (454$h) **et
+`coverUrl`** (jaquette Google Books résolue par ISBN — cf. [Jaquettes par
+tome](#jaquettes-par-tome-google-books) ; `null` si non résolue). À l'import, l'app crée un tome
+(`Record`) et **stocke dans ses extras** l'édition (205), l'éditeur et la plage source
+(`sourceVolumeRange`), et met en cache la **jaquette du tome**. Le **détail d'un tome manga** (écran
+dédié) affiche alors n° de tome, édition, éditeur, ISBN, et le libellé dérivé « **contient les tomes 1
+à 3** » pour les éditions compilées. Le **résumé** montré est celui de la **série**
+(`Series.synopsis`) : ni MAL (résumé d'œuvre) ni la BnF (`330` quasi jamais renseigné par volume) n'ont
+de synopsis par tome. Google Books, lui, expose un `description` **par édition** — disponible mais
+**pas encore exploité** (voir section suivante).
+
+## Jaquettes par tome (Google Books)
+
+Ni la BnF (bibliographique, sans image) ni MyAnimeList (uniquement `main_picture`, **au niveau
+série**) ne fournissent de jaquette **par volume**. La seule source d'image par tome est **Google
+Books**, interrogée **par ISBN** — c'est le troisième pilier du scan manga.
+
+- **Service** : `GoogleBooksCoverService` (`src/common/sources/googlebooks/googlebooks.service.ts`),
+  module `@Global` (miroir de `BnfModule`). Réutilise l'infra commune : `HttpClientService`,
+  `ApiCacheService`, `TokenBucketService`.
+  - `resolveCover(isbn)` — appelle `GET https://www.googleapis.com/books/v1/volumes?q=isbn:<isbn>&country=FR`
+    (clé `GOOGLE_BOOKS_API_KEY` optionnelle), extrait `volumeInfo.imageLinks.thumbnail` (repli
+    `smallThumbnail`), force `https://` et retire `&edge=curl`. **Best-effort** : rate-limit / échec /
+    absence → `null`, jamais d'exception. **Cache** positif 90 j, négatif 7 j (évite de re-taper un
+    ISBN sans jaquette).
+  - `cachedCover(isbn)` — lecture **cache-only** (jamais de réseau).
+- **Endpoints** :
+
+  | Route | Comportement |
+  |---|---|
+  | `GET /v1/search/cover?isbn=` | résout (réseau) **et** met en cache → `{ coverUrl }`. Source de vérité de la résolution ; appelé explicitement par l'app (politique réseau : pas d'appel en arrière-plan). |
+  | `GET /v1/search/edition-mapping` | chaque tome porte `coverUrl`, peuplé **depuis le cache uniquement** (`cachedCover`) → **latence inchangée**, aucun appel Google Books pendant l'énumération. Le cache est alimenté par `/cover`. |
+
+- **Réponse enrichie** : `edition-mapping` renvoie un type dédié (`EditionMappingResponse` /
+  `EditionTomeWithCover`) — `coverUrl` est peuplé côté `SearchService`, ce qui laisse `EditionTome`
+  (couche BnF) pur.
+- **Ne remplace pas MAL** : Google Books ignore la notion de **série** (pas de `num_volumes`, pas de
+  statut de publication, pas d'agrégation). Il expose bien un résumé (`description`, par édition) et une
+  note (`averageRating`), mais au **tome**, pas à la série. MAL reste la source du **nœud série** ;
+  Google Books enrichit le **tome** (jaquette, éventuellement résumé par volume plus tard).
 
 ## Observabilité (logs)
 

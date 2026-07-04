@@ -27,11 +27,18 @@ Cette page explique **quelles sources** sont utilisées et **ce que ça implique
 
 ## Scanner un manga : retrouver la série et tous ses tomes
 
-Pour les mangas, vous pouvez **scanner le code-barres (ISBN)** d'un tome. Acervatim :
+Pour les mangas, vous pouvez **scanner le code-barres (ISBN)** d'un tome. À partir de ce seul
+ISBN, Acervatim combine **trois sources complémentaires**, chacune avec son rôle :
 
-1. identifie l'ouvrage auprès de la **BnF** (catalogue officiel des éditions françaises) ;
-2. retrouve la **série** correspondante et ses informations sur **MyAnimeList** ;
-3. vous propose la série pour **valider les tomes** d'un coup.
+1. **BnF** — identifie l'ouvrage dans le catalogue officiel des éditions françaises (titre de
+   série, n° de tome, éditeur, ISBN) et sait **énumérer tous les tomes** d'une édition ;
+2. **MyAnimeList** — retrouve la **série** correspondante et ses informations d'ensemble (synopsis,
+   nombre de tomes annoncés, statut de publication, note, visuel de série) ;
+3. **Google Books** — récupère la **jaquette de chaque tome** (par ISBN) — la BnF et MyAnimeList
+   ne fournissent pas d'image par volume.
+
+Acervatim vous propose alors la série pour **valider les tomes** d'un coup, chaque tome avec sa
+propre jaquette.
 
 ### Comment l'app retrouve la bonne série
 
@@ -69,7 +76,7 @@ traduits). Vous pouvez toujours le **modifier** après coup.
 Acervatim est conçu **privacy by design**. Concernant ces sources de données :
 
 - Les recherches portent sur **l'objet** (un disque, un livre), **jamais sur vous**. Aucun nom, email
-  ni identifiant personnel n'est transmis à Discogs, MyAnimeList, la BnF ou TMDB.
+  ni identifiant personnel n'est transmis à Discogs, MyAnimeList, la BnF, Google Books ou TMDB.
 - En mode **connecté**, les sources sont interrogées avec **vos propres jetons d'accès** (que vous
   renseignez dans les réglages) ; en **premium**, ce sont les jetons Acervatim, gardés côté serveur,
   qui sont utilisés à votre place.
