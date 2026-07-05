@@ -27,6 +27,30 @@ Chaque type média est servi par un **adapter** (`SourceAdapter`) :
 
 Code : `src/common/sources/` et `src/oauth/providers/` (dépôt `acervatim-backend`).
 
+## Résolution des jetons (BYOT / repli premium / mode dégradé)
+
+Chaque source à jeton (Discogs, MAL, TMDB) résout son jeton **de la même façon**, via
+`TokenResolverService` (`src/oauth/token-resolver.service.ts`) :
+
+1. **Jeton utilisateur (BYOT)** — si l'utilisateur a connecté la source, on utilise **son** jeton
+   (répartition des quotas fournisseur sur son compte, résultats liés à son compte source).
+2. **Repli premium** — sinon, si l'utilisateur est **premium**, repli sur les **jetons Acervatim** :
+   `X-MAL-CLIENT-ID` (MAL), personal access token (Discogs, `DISCOGS_ACERVATIM_TOKEN`), clé serveur
+   (TMDB, `TMDB_API_KEY`). Ce repli est plafonné par un bucket de rate-limit **partagé**
+   `acervatim:<source>` (tous premiums confondus), pour ne pas faire throttler le compte Acervatim.
+3. **Mode dégradé** — sinon (non-premium sans jeton) : **aucun appel sortant** vers une source à
+   jeton. On sert les sources **sans clé** (BnF) et les réponses déjà en **cache partagé** ; à défaut,
+   l'erreur actionnable **`403 source-token-required`** (avec `provider`), qui invite à connecter la
+   source **ou** à passer premium.
+
+Le cache de recherche est indexé sur la **requête publique** (`<source>:<requête>`, sans `userId`) :
+une réponse obtenue via jeton Acervatim est identique à une réponse jeton-utilisateur (endpoints
+publics interrogés ici), donc **partageable sans fuite**. Le mode dégradé ne sert donc que des clés
+partagées.
+
+**TMDB n'a pas d'OAuth** : la clé personnelle se saisit via `PUT /v1/sources/tmdb/token` (stockée
+chiffrée dans `oauth_credentials`, provider `tmdb`) ; `DELETE` pour la révoquer.
+
 ## Vue d'ensemble : trois sources pour un manga
 
 À partir d'un seul **ISBN**, trois sources se répartissent le travail — chacune à sa granularité :
@@ -92,8 +116,11 @@ Zones extraites → `BnfNotice` :
 ### Étape C+D — MyAnimeList
 `MalAdapter.searchByBarcode` (`src/oauth/providers/mal.adapter.ts`) :
 
-- Recherche **publique** via l'en-tête `X-MAL-CLIENT-ID` (pas d'OAuth utilisateur requis pour un
-  scan ISBN). Le Client ID vit côté serveur (`MAL_CLIENT_ID`).
+- Jeton MAL **résolu** (cf. [Résolution des jetons](#résolution-des-jetons-byot--repli-premium--mode-dégradé)) :
+  Bearer de l'utilisateur s'il a connecté MAL, sinon repli `X-MAL-CLIENT-ID` serveur (`MAL_CLIENT_ID`)
+  pour un premium ; un non-premium sans jeton obtient la **notice BnF seule** (aucun appel MAL). Les
+  endpoints publics MAL renvoient un corps **identique** en Bearer et en `X-MAL-CLIENT-ID` (vérifié),
+  donc un scan ISBN ne requiert pas d'OAuth pour un premium.
 - Requête `q=<titre>` envoyée **brute** : le `q=` de MyAnimeList est *fuzzy côté serveur* et absorbe
   les écarts de romanisation (ex. `jyouou` ↔ `joou`). Aucune normalisation romaji n'est nécessaire pour
   interroger. Le titre interrogé est le **titre original romaji** (`454$t`) ; à défaut, le **titre FR**

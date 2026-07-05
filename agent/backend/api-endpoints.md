@@ -58,18 +58,25 @@
 
 | Route | Controller | Notes |
 |---|---|---|
-| `GET /v1/search` | `search/search.controller.ts` | `type` obligatoire ; `q` XOR `barcode` ; routé vers l'adapter du type (Discogs pour vinyl, MAL/BnF pour manga) via `SOURCE_ADAPTERS` — voir [../transverse/sources-externes.md](../transverse/sources-externes.md) |
+| `GET /v1/search` | `search/search.controller.ts` | `type` obligatoire ; `q` XOR `barcode` ; routé vers l'adapter du type (Discogs pour vinyl, MAL/BnF pour manga) via `SOURCE_ADAPTERS`. Jeton résolu par `TokenResolverService` : BYOT → repli premium → mode dégradé → `403 source-token-required` — voir [../transverse/sources-externes.md](../transverse/sources-externes.md#résolution-des-jetons-byot--repli-premium--mode-dégradé) |
 | `GET /v1/search/edition-mapping` | idem | `title` (+ `edition`) → énumération des tomes d'une édition via BnF (`common/sources/bnf/bnf.service.ts`) ; chaque tome porte `coverUrl` (jaquette Google Books en cache, sinon `null`) |
 | `GET /v1/search/cover` | idem | `isbn` → `{ coverUrl }` : résout la jaquette d'un tome par ISBN via Google Books (`common/sources/googlebooks/googlebooks.service.ts`) et alimente le cache |
 
-## OAuth externe (comptes user Discogs / MAL / TMDB)
+## OAuth externe (comptes user Discogs / MAL)
 
 | Route | Controller | Notes |
 |---|---|---|
-| `GET /v1/oauth/:provider/start` | `oauth/oauth.controller.ts` | Démarre le flow (OAuth1 Discogs, PKCE MAL, TMDB) |
+| `GET /v1/oauth/:provider/start` | `oauth/oauth.controller.ts` | Démarre le flow (OAuth1 Discogs, PKCE MAL). **TMDB non concerné** (pas d'OAuth → `/start` renvoie 404) |
 | `GET /v1/oauth/:provider/callback` | idem | Callback ; tokens chiffrés AES-256-GCM en base |
 | `GET /v1/oauth` | idem | Providers connectés |
 | `DELETE /v1/oauth/:provider` | idem | Révocation |
+
+## Sources externes (clé personnelle — BYOT hors OAuth)
+
+| Route | Controller | Notes |
+|---|---|---|
+| `PUT /v1/sources/tmdb/token` | `sources/sources.controller.ts` | Saisit/remplace la clé API TMDB perso (`{ token }`), stockée chiffrée (`oauth_credentials`, provider `tmdb`). Pas de validation à la saisie |
+| `DELETE /v1/sources/tmdb/token` | idem | Révoque la clé TMDB perso (idempotent, `204`) |
 
 ## Premium & abonnements
 

@@ -37,7 +37,12 @@ En dev (`NODE_ENV !== 'production'`), un Swagger UI est exposé sur `GET /docs`.
 ```
 
 `type` est une URI stable par classe d'erreur (`/probs/validation-error`, `/probs/not-found`,
-`/probs/forbidden`, `/probs/too-many-requests`, …). Aucun internal (stack, SQL) en production.
+`/probs/forbidden`, `/probs/too-many-requests`, `/probs/source-token-required`, …). Aucun internal
+(stack, SQL) en production.
+
+Certaines erreurs portent des **membres d'extension** (RFC 9457). En particulier
+`/probs/source-token-required` (**403**) ajoute `provider` — la source à connecter — pour que l'app
+propose le bon parcours : **connecter la source** (`/v1/oauth/:provider/start`) **ou passer premium**.
 
 ## Pagination — cursor only
 
@@ -75,6 +80,11 @@ En dev (`NODE_ENV !== 'production'`), un Swagger UI est exposé sur `GET /docs`.
 | GET | `/v1/me/export` | Export complet des données (portabilité RGPD). |
 | DELETE | `/v1/me` | Suppression du compte + données (cascade). |
 
+> **Quotas & synchronisation** : le stockage (collections / items / nœuds) reste accessible au **palier
+> gratuit**, borné par les quotas (`GET /v1/me/quota`) ; le **premium** lève la limite (illimité).
+> Aucune route de synchronisation n'est réservée au premium — seule la **limite** diffère (pas de gate
+> `402` sur la sync).
+
 ### Collections
 | Méthode | Route | Rôle |
 |---|---|---|
@@ -110,6 +120,11 @@ En dev (`NODE_ENV !== 'production'`), un Swagger UI est exposé sur `GET /docs`.
 |---|---|---|
 | GET | `/v1/search?type=…&q=…` **ou** `?type=…&barcode=…` | Proxy unifié (`q`/`barcode` mutuellement exclusifs) → `UnifiedItem`. Voir [Sources & pivot ISBN](sources-et-pivot-isbn.md). |
 
+> **Résolution des jetons** : chaque appel sortant utilise le jeton de l'utilisateur (**BYOT**) s'il a
+> connecté la source ; sinon, pour un **premium**, un repli sur les jetons Acervatim ; sinon un mode
+> **dégradé** (cache partagé + sources sans clé, ex. BnF) puis l'erreur actionnable
+> `source-token-required` (403). Détail : [Sources & pivot ISBN](sources-et-pivot-isbn.md#résolution-des-jetons-byot--repli-premium--mode-dégradé).
+
 ### Comptes externes (OAuth)
 | Méthode | Route | Rôle |
 |---|---|---|
@@ -117,6 +132,12 @@ En dev (`NODE_ENV !== 'production'`), un Swagger UI est exposé sur `GET /docs`.
 | GET | `/v1/oauth/:provider/callback` | Callback OAuth. |
 | GET | `/v1/oauth` | Comptes connectés. |
 | DELETE | `/v1/oauth/:provider` | Révocation. |
+
+### Sources externes — clé personnelle (BYOT hors OAuth)
+| Méthode | Route | Rôle |
+|---|---|---|
+| PUT | `/v1/sources/tmdb/token` | Enregistre/remplace la **clé API TMDB personnelle** (TMDB n'a pas d'OAuth). Stockée chiffrée (`oauth_credentials`, provider `tmdb`). |
+| DELETE | `/v1/sources/tmdb/token` | Révoque la clé TMDB personnelle. |
 
 ### Premium & invitations
 | Méthode | Route | Rôle |

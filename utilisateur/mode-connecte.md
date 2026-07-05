@@ -16,14 +16,16 @@ l'application en local.
 | Mode | Ce qu'il apporte |
 |---|---|
 | **Hors-ligne** (par défaut) | Tout l'essentiel, sans compte ni réseau : saisie manuelle, scan local, recherche, wishlist, import/export, sauvegarde ZIP. |
-| **Connecté** | **Enrichissement** des fiches (titre, auteur·rice·s, pochette, année, synopsis…) depuis des bases spécialisées (voir [D'où viennent les informations](sources-de-donnees.md)), en utilisant **vos propres jetons d'accès** aux sources (*bring your own token*). Pas de synchronisation. |
-| **Premium** | Enrichissement avec les **jetons Acervatim** — aucune clé personnelle à créer. Dans un second temps : **synchronisation cloud** de vos collections, d'abord comme sauvegarde, puis pour la consultation en ligne. |
+| **Connecté** | **Enrichissement** des fiches (titre, auteur·rice·s, pochette, année, synopsis…) depuis des bases spécialisées (voir [D'où viennent les informations](sources-de-donnees.md)), en utilisant **vos propres jetons d'accès** aux sources (*bring your own token*). Synchronisation de vos collections dans la limite des quotas gratuits (10 collections, 500 éléments). |
+| **Premium** | Enrichissement avec les **jetons Acervatim** quand vous n'avez pas renseigné les vôtres — aucune clé personnelle à créer, vos jetons restent utilisés en priorité. **Synchronisation cloud sans limite**, d'abord comme sauvegarde, puis pour la consultation en ligne. |
 
 ## Le mode connecté en pratique
 
 - **Enrichissement au scan ou à la recherche** : scanner un disque ou un manga et récupérer
   automatiquement ses métadonnées depuis des bases spécialisées, avec les jetons que vous avez
   renseignés dans **Réglages → Comptes & sources**.
+- **Synchronisation** : vos collections sont sauvegardées côté serveur, dans la limite des
+  quotas gratuits (10 collections, 500 éléments) — le palier premium lève ces limites.
 - **Compte** : export de vos données (portabilité) et suppression de compte en un geste.
 
 ## Ce qui reste toujours vrai
@@ -41,7 +43,7 @@ l'application en local.
 1. Vous vous connectez avec **Google Sign-In**.
 2. L'application échange ce login contre un **jeton de session** stocké chiffré sur l'appareil.
 3. Vos actions connectées (scan, recherche) interrogent les bases externes avec **vos jetons
-   d'accès** — ou avec les jetons Acervatim si vous êtes premium.
+   d'accès** — ou, si vous êtes premium et n'en avez pas renseigné, avec les jetons Acervatim.
 
 > Pour le détail technique (architecture, API, sécurité), voir l'espace développeur :
 > [Le serveur Acervatim](../developpeur/backend.md).
