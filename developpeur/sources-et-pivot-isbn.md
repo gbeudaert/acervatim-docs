@@ -118,7 +118,8 @@ Zones extraites → `BnfNotice` :
 
 - Jeton MAL **résolu** (cf. [Résolution des jetons](#résolution-des-jetons-byot--repli-premium--mode-dégradé)) :
   Bearer de l'utilisateur s'il a connecté MAL, sinon repli `X-MAL-CLIENT-ID` serveur (`MAL_CLIENT_ID`)
-  pour un premium ; un non-premium sans jeton obtient la **notice BnF seule** (aucun appel MAL). Les
+  pour un premium ; un non-premium sans jeton obtient la **notice BnF seule** — mappée en item avec
+  jaquette Google Books, cf. §[Repli `bnf_only`](#repli-bnf-only) (aucun appel MAL). Les
   endpoints publics MAL renvoient un corps **identique** en Bearer et en `X-MAL-CLIENT-ID` (vérifié),
   donc un scan ISBN ne requiert pas d'OAuth pour un premium.
 - Requête `q=<titre>` envoyée **brute** : le `q=` de MyAnimeList est *fuzzy côté serveur* et absorbe
@@ -128,7 +129,8 @@ Zones extraites → `BnfNotice` :
 - **Consolidation** : parmi les candidats, on retient celui de **meilleur score** (voir §Scoring de
   confiance) — jamais un simple « premier résultat ». Le **match auteur** (nom BnF `700` vs `authors`
   MAL, insensible casse / accents / ordre) est le validateur robuste : il confirme un titre qui pourrait
-  matcher par hasard. Sans signal suffisant → pas de sélection (`bnf_only`).
+  matcher par hasard. Sans signal suffisant → pas de sélection MAL, la **notice BnF est renvoyée**
+  (`bnf_only`, cf. §Sortie).
 - **Piège type LN vs manga** : l'œuvre source japonaise peut être un **light novel** alors que
   l'édition FR est une **adaptation manga** (cas réel : *Kakuzetsu Toshi no Joou* / *Attack on Titan:
   The Harsh Mistress of the City* est un LN sur MAL, catalogué adaptation manga côté BnF). Pour
@@ -165,7 +167,8 @@ l'auteur tranche).
 
 Le **repli titre FR** sert les mangas dont le titre est **conservé en graphie latine** en France
 (*Black Torch*, *One Piece*…) : le titre FR = l'original, donc la recherche MAL aboutit. Mais un titre
-FR étant plus générique (homonymes), **seul l'auteur valide** — sans match auteur, rien n'est retenu.
+FR étant plus générique (homonymes), **seul l'auteur valide** — sans match auteur, aucun candidat MAL
+n'est retenu (repli `bnf_only`).
 
 ### Sortie
 Un `UnifiedItem` au niveau **série** (pour le fan-out des tomes), enrichi de
@@ -177,6 +180,19 @@ Le **synopsis** (`description`) privilégie la **note de résumé BnF** (`330$a`
 existe, avec repli sur le synopsis MyAnimeList (**anglais** — MAL ne fournit aucun résumé localisé, ni
 paramètre de langue, ni champ `synopsis_fr`). `metadata.pivot` porte `{ confidence, authorMatched,
 resolutionPath }` pour l'audit.
+
+### Repli `bnf_only` — la notice BnF n'est jamais jetée {#repli-bnf-only}
+
+Quand MyAnimeList **n'enrichit pas** — pas de jeton ni de hit de cache (mode dégradé), aucun candidat
+retenu (homonyme sans auteur…), ou pas de titre pour interroger MAL — le backend ne renvoie **pas** une
+liste vide : `MalAdapter.bnfOnlyResult` **mappe la notice BnF** en `UnifiedItem` (`source: 'bnf'`,
+`resolutionPath: 'bnf_only'`), avec le **même `metadata.scannedTome`** que le chemin enrichi, la **note
+FR** (`330$a`) en description si présente, et la **jaquette du tome scanné résolue par ISBN via Google
+Books** (best-effort — `null` si absente). Un scan manga **sans jeton MAL affiche donc la fiche**
+(série + tome), enrichissable plus tard. Le résultat n'est **vide** que si la notice n'a **aucun titre
+exploitable** (ni série `461$t` ni tome `200$a`). `bnf` est un code source à part entière
+(`ITEM_SOURCE_CODES`) sans adapter dédié : à la création d'item, `SourceSnapshotService` stocke la
+référence sans snapshot.
 
 ## Éditions collector (ex. Colossale)
 
@@ -275,9 +291,9 @@ match auteur est exigé (`requireAuthor`), les candidats bruts, et ce qu'on reti
 |---|---|
 | ISBN absent du catalogue BnF | `unresolved` (`bnf_not_found`). |
 | Notice sans `454` ni `500` (titre conservé en graphie latine, ou catalogage incomplet) | **repli sur le titre FR** (`200$a`) envoyé à MAL, **match auteur obligatoire** → `bnf+mal-fr`. Si l'auteur ne matche aucun candidat → `bnf_only` (repli possible sur **data.bnf.fr**). |
-| Notice sans titre FR **ni** original | `bnf_only`, aucune requête MAL. |
-| MAL renvoie 0 résultat / que des homonymes sans auteur | `bnf_only` (on ne retient rien plutôt qu'un faux positif). |
-| MAL renvoie N candidats sans match auteur/type net | renvoyer top-N + scores, **ne pas auto-sélectionner**. |
+| Notice sans titre FR **ni** original | `bnf_only` via le titre de série (`461$t`) si présent, sinon résultat vide ; aucune requête MAL. |
+| MAL renvoie 0 résultat / que des homonymes sans auteur | `bnf_only` : on **retient la notice BnF** (mappée en item + jaquette Google Books) plutôt qu'un faux positif MAL. |
+| MAL renvoie N candidats sans match auteur/type net | aucun auto-sélectionné → `bnf_only` (la notice BnF sert de repli sûr). |
 | Romaji BnF ≠ romaji MAL malgré le fuzzy serveur | dernier recours : **pivot AniList** (champ `idMal`) — fuzzy-match sur AniList puis récupérer l'ID MAL canonique. |
 
 > **Pas d'identifiant pivot natif** : la BnF expose un ARK, MAL ne porte pas d'ISBN. Le pont est le
