@@ -8,9 +8,9 @@
 | Module | Fichiers clés | Responsabilité |
 |---|---|---|
 | `auth/` | `auth.service.ts`, `identity-resolver.service.ts`, `providers/google.provider.ts`, `providers/identity-provider.registry.ts` | Vérifie l'idToken Google, hache le `sub` (HMAC), trouve/crée le `User`, émet le JWT interne. Le registry permet d'ajouter d'autres identity providers |
-| `users/` | `users.service.ts` | `/me` : profil, quota (via `common/quota`), export RGPD, suppression de compte (+ audit log) |
+| `users/` | `users.service.ts` | `/me` : profil, statut premium, export RGPD (user + collections + **nœuds** + items + oauth + sub/grant + audit), suppression de compte (+ audit log) |
 | `collections/` | `collections.service.ts`, `collection-type-codes.ts`, `types/` | CRUD collections. `types/registry.ts` → profils `vinylProfile` / `mangaProfile` / `makeFallbackProfile` ; `types/common.ts` (interface `CollectionTypeProfile`), `types/hierarchy.ts` (règles hiérarchie). Recherche dans le contenu : `matchingCollectionIds` (SQL collate CI) |
-| `items/` | `items.service.ts`, `item-source-codes.ts`, `dto/item-user-data.schema.ts` | CRUD items, validation `unifiedData` par profil, attach de sources, quota, maintenance `itemCount` |
+| `items/` | `items.service.ts`, `item-source-codes.ts`, `dto/item-user-data.schema.ts` | CRUD items, validation `unifiedData` par profil, attach de sources, plafond technique, maintenance `itemCount` |
 | `nodes/` | `nodes.service.ts` | CRUD nœuds (séries), attach de sources, purge des nœuds vides non-wishlist |
 | `search/` | `search.service.ts` | Route `q`/`barcode` vers l'adapter du type (`Map<CollectionTypeCode, SourceAdapter>` injectée via `SOURCE_ADAPTERS`) ; `editionMapping` → BnF |
 | `oauth/` | `oauth.service.ts`, `oauth-flow.registry.ts`, `providers/` | Flows OAuth user : `discogs.adapter.ts` (OAuth 1.0a, cf. `providers/oauth1.ts`), `mal.adapter.ts` (OAuth2 PKCE, cf. `providers/pkce.ts`), `tmdb.adapter.ts`. Tokens chiffrés via `AesService`. `providers/types.ts` définit `SourceAdapter`/`UnifiedItem` (aussi utilisés par search) |
@@ -34,9 +34,10 @@
 | `common/interceptors/` | `correlation-id.interceptor.ts` | `requestId` propagé dans réponses et erreurs |
 | `common/logging/` | `access-log.middleware.ts` | Log d'accès (sans données perso) |
 | `common/pagination/` | `paginate.ts` | Helper pagination cursor (`CursorPage`, wrapper `{ data, meta }`) |
-| `common/quota/` | `quota.service.ts`, `quota-exceeded.exception.ts` | Quota d'items free vs premium |
-| `common/rate-limit/` | `token-bucket.service.ts` | Token bucket persistant (appels providers) |
-| `common/sources/` | `source-snapshot.service.ts` (token `SOURCE_ADAPTERS`), `bnf/` | Registre des adapters de sources ; `bnf/bnf.service.ts` + `bnf/unimarc.parser.ts` : SRU BnF, parsing UNIMARC, énumération d'éditions manga |
+| `common/limits/` | `limits.service.ts`, `technical-limit.exception.ts` | **Plafonds techniques** (`TECHNICAL_LIMITS`), identiques pour tous, non exposés, décorrélés du palier — anti-emballement, pas une limite d'offre. Dépassement → **409** `/probs/technical-limit`. Ex-`common/quota/`, requalifié en S2 |
+| `common/sources/` | `source-snapshot.service.ts` (token `SOURCE_ADAPTERS`), `bnf/`, `mangadex/`, `googlebooks/`, `manga-matching.ts` | Registre des adapters ; `bnf/` (SRU BnF, parsing UNIMARC, énumération d'éditions) ; `mangadex/` (identité manga **source principale** + jaquettes par tome, file BullMQ, sans adapter) ; `googlebooks/` (jaquette par ISBN, repli) ; `manga-matching.ts` (rapprochement titre/auteur partagé MAL+MangaDex + `isSpecialArtEdition`) |
+
+> Le throttle des appels sortants (ex-`common/rate-limit/token-bucket.service.ts`, **retiré**) passe désormais par les **limiters BullMQ** — une file par source (`gbooks`, `bnf`, `mal`, `discogs`, `tmdb`, `mangadex`) ; cf. [scan-asynchrone-bullmq.md](scan-asynchrone-bullmq.md).
 
 ## Ajouter un nouveau type de collection (recette)
 

@@ -32,18 +32,21 @@
 | Problem Details, erreurs API | `be:common/filters/problem-details.filter.ts` · `app:data/remote/interceptor/ErrorInterceptor.kt` |
 | Pagination, cursor | `be:common/pagination/paginate.ts` · `app:data/remote/dto/PageDto.kt` |
 | Filtres `[in]` / `[all]` | `be:common/filters/parse-filters.ts` |
-| Quota, limite d'items | `be:common/quota/quota.service.ts` |
-| Rate limit | `be:common/rate-limit/token-bucket.service.ts` |
+| Plafond technique d'items | `be:common/limits/limits.service.ts` (anti-emballement, pas une limite d'offre) |
+| Gate premium sur la sync | `be:premium/premium.guard.ts` (écriture) · `be:premium/collection-premium.guard.ts` (lecture, statut du **propriétaire**) |
+| Throttle appels sortants (limiters BullMQ) | `be:src/oauth/providers/*.processor.ts` · `be:src/common/sources/googlebooks/googlebooks.processor.ts` (cf. [scan-asynchrone-bullmq.md](../backend/scan-asynchrone-bullmq.md)) |
 | Cache API externe | `be:common/cache/api-cache.service.ts` |
 | Audit log | `be:common/audit/audit-log.service.ts` |
-| unifiedData, sources, userData | `be:collections/types/` (schémas) · `be:items/dto/item-user-data.schema.ts` · [backend/modele-de-donnees.md](../backend/modele-de-donnees.md) |
+| unifiedData, sources, userData | `be:collections/types/` (schémas) · `be:items/dto/item-user-data.schema.ts` · `be:nodes/dto/node-user-data.schema.ts` · [backend/modele-de-donnees.md](../backend/modele-de-donnees.md) |
+| « le serveur connaît-il ce champ ? » | [backend/contrat-app-serveur.md](../backend/contrat-app-serveur.md) (tableau app ↔ serveur, item et nœud) |
 | Profil vinyl / manga | `be:collections/types/vinyl.ts` / `manga.ts` / `registry.ts` |
 | Série, node, hiérarchie | `be:nodes/` · `app:ui/series/` · `app:domain/model/Series.kt` |
 | Tome, volume | `be:items/` (unique userId+nodeId+volume) · `app:ui/manga/` |
 | Scan, barcode, ML Kit | `app:ui/scan/` · `app:domain/usecase/LookupByBarcodeUseCase.kt` |
 | ISBN, BnF, UNIMARC, édition | `be:common/sources/bnf/` · `be:search/` |
+| MangaDex, identité manga, jaquettes/tome | `be:common/sources/mangadex/` (identify + covers) · `be:common/sources/manga-matching.ts` (rapprochement partagé + `isSpecialArtEdition`) |
 | Discogs | `be:oauth/providers/discogs.adapter.ts` (+ `oauth1.ts`) |
-| MAL, MyAnimeList | `be:oauth/providers/mal.adapter.ts` (+ `pkce.ts`) |
+| MAL, MyAnimeList (identité repli + pivot) | `be:oauth/providers/mal.adapter.ts` (+ `pkce.ts`) — `searchByBarcode` orchestre BnF → MangaDex → MAL |
 | TMDB | `be:oauth/providers/tmdb.adapter.ts` |
 | Recherche externe | `be:search/search.service.ts` · `app:data/remote/search/` |
 | Sync, WorkManager | `app:data/remote/sync/` (SyncManagerImpl, SyncWorker) |

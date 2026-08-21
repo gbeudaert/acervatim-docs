@@ -14,7 +14,7 @@ Documentation technique pour contribuer à Acervatim ou intégrer son API.
 - [Référence API](api-reference.md) — contrat `/v1`, conventions, erreurs, pagination.
 - [Authentification Google](auth-google.md) — setup OAuth côté app et côté backend.
 - [Déploiement du backend](deploiement.md) — conteneur Podman, reverse proxy, migrations.
-- [Sources de données & pivot ISBN](sources-et-pivot-isbn.md) — provenance des champs, flux scan, pivot BnF → MyAnimeList.
+- [Sources de données & pivot ISBN](sources-et-pivot-isbn.md) — provenance des champs, flux scan, pivot BnF → MangaDex (MAL en repli).
 - [Publication Play Store](publication-play-store.md) — release de l'application Android.
 
 > Le code reste la source de vérité : les dépôts `acervatim-app` (application) et

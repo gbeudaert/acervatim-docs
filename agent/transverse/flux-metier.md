@@ -50,7 +50,7 @@ App: achat Play Billing → POST /v1/subscriptions/verify { purchaseToken }
 Asynchrone: Google → POST /webhooks/google-play/rtdn (Pub/Sub, signé)
   → pubsub-verifier → subscriptions.service (transition de statut, subscription-status.ts)
 Cron: subscriptions.cron re-vérifie les subs proches d'expiration
-Gate: premium.guard (402) + quota.service (limites free)
+Gate: premium.guard (402, ecriture) + collection-premium.guard (402, lecture owner-aware)
 ```
 
 ## 6. Invitation (beta / comp)

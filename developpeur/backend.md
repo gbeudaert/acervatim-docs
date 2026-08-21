@@ -24,7 +24,7 @@ Le serveur remplit cinq rôles, par ordre de priorité :
 
 1. **Proxy des bases de données externes.** L'application ne parle plus directement à Discogs, MyAnimeList ou TMDB : elle interroge un unique endpoint de recherche (`/v1/search`) qui route la requête vers la bonne source selon le type de collection. Les clés et secrets d'API restent côté serveur, jamais embarqués dans l'application.
 2. **Cache partagé.** Une recherche effectuée par un utilisateur bénéficie aux suivants : réponses plus rapides et charge réduite sur les API tierces.
-3. **Throttling centralisé.** Un mécanisme de *token bucket* par utilisateur et par source protège les quotas des API externes (Discogs limite par exemple à 60 requêtes/minute).
+3. **Throttling centralisé.** Une passerelle d'appels sortants (files **BullMQ**, une par source, adossées à Redis) plafonne le débit vers les API externes et déduplique les requêtes concurrentes identiques (*single-flight*), protégeant leurs quotas (Discogs limite par exemple à 60 requêtes/minute).
 4. **OAuth complexes côté serveur.** Certains protocoles (Discogs OAuth 1.0a, avec signatures HMAC) ne peuvent pas être implémentés proprement sur un appareil sans y embarquer des secrets. Le serveur gère ces flux et stocke les jetons **chiffrés** (AES-256-GCM).
 5. **Services de compte.** Synchronisation des collections (palier premium à terme), statut premium, export et suppression des données.
 
@@ -39,7 +39,7 @@ Le serveur remplit cinq rôles, par ordre de priorité :
         ▼
 [API NestJS (Node.js)]
         ├──► MariaDB (Prisma)
-        ├──► APIs externes : Discogs · MyAnimeList · TMDB
+        ├──► APIs externes : Discogs · BnF · MangaDex · MyAnimeList · Google Books · TMDB
         └──► Cache & rate-limit
 ```
 
@@ -69,11 +69,15 @@ La protection des données n'est pas une couche ajoutée, c'est une contrainte d
 
 - `POST /v1/auth/google` — échange un jeton Google Sign-In contre un JWT applicatif ; crée le compte au premier login.
 - `GET /v1/me` — profil minimal et statut premium.
-- `GET /v1/me/quota` — consommation des quotas du palier gratuit.
 - `GET /v1/me/export` — export complet des données (portabilité, RGPD art. 20).
 - `DELETE /v1/me` — suppression du compte et de toutes les données associées.
 
 ### Collections, items et nœuds
+
+**Ces routes sont réservées au premium** : le stockage serveur a un coût réel, il n'existe donc pas
+de palier gratuit synchronisé. Un compte non premium reçoit `402` aussi bien en écriture qu'en
+lecture ; en lecture, c'est le statut du **propriétaire** de la collection qui compte, afin qu'un
+membre non premium puisse consulter une collection partagée avec lui.
 
 Le modèle serveur est le miroir du modèle local de l'application :
 
@@ -94,7 +98,7 @@ Le modèle serveur est le miroir du modèle local de l'application :
 ### Premium et invitations
 
 - `POST /v1/subscriptions/verify` et `POST /v1/invitations/redeem` — endpoints de gestion du statut premium présents dans le code ; leur périmètre fonctionnel est en cours de redéfinition (voir le plan de mise en conformité de l'offre).
-- Le statut premium conditionne les quotas et les fonctionnalités qui lui sont réservées.
+- Le statut premium conditionne l'accès à la synchronisation et aux fonctionnalités qui lui sont réservées.
 
 ### Qualité de l'API
 

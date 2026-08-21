@@ -16,16 +16,16 @@ l'application en local.
 | Mode | Ce qu'il apporte |
 |---|---|
 | **Hors-ligne** (par défaut) | Tout l'essentiel, sans compte ni réseau : saisie manuelle, scan local, recherche, wishlist, import/export, sauvegarde ZIP. |
-| **Connecté** | **Enrichissement** des fiches (titre, auteur·rice·s, pochette, année, synopsis…) depuis des bases spécialisées (voir [D'où viennent les informations](sources-de-donnees.md)), en utilisant **vos propres jetons d'accès** aux sources (*bring your own token*). Synchronisation de vos collections dans la limite des quotas gratuits (10 collections, 500 éléments). |
-| **Premium** | Enrichissement avec les **jetons Acervatim** quand vous n'avez pas renseigné les vôtres — aucune clé personnelle à créer, vos jetons restent utilisés en priorité. **Synchronisation cloud sans limite**, d'abord comme sauvegarde, puis pour la consultation en ligne. |
+| **Connecté** | **Enrichissement** des fiches (titre, auteur·rice·s, pochette, année, synopsis…) depuis des bases spécialisées (voir [D'où viennent les informations](sources-de-donnees.md)), en utilisant **vos propres jetons d'accès** aux sources (*bring your own token*). Pas de synchronisation cloud à ce palier : vos collections restent sur l'appareil. |
+| **Premium** | Palier unique, à prix bas : il finance le fonctionnement du serveur partagé, pas un objectif de rentabilité. Enrichissement avec les **jetons Acervatim** quand vous n'avez pas renseigné les vôtres — aucune clé personnelle à créer, vos jetons restent utilisés en priorité. **Synchronisation cloud sans limite**, d'abord comme sauvegarde, puis pour la consultation en ligne. **Partage de collection avec d'autres membres** (tout, uniquement les possédés, ou uniquement la wantlist — en lecture seule pour eux). |
 
 ## Le mode connecté en pratique
 
 - **Enrichissement au scan ou à la recherche** : scanner un disque ou un manga et récupérer
   automatiquement ses métadonnées depuis des bases spécialisées, avec les jetons que vous avez
   renseignés dans **Réglages → Comptes & sources**.
-- **Synchronisation** : vos collections sont sauvegardées côté serveur, dans la limite des
-  quotas gratuits (10 collections, 500 éléments) — le palier premium lève ces limites.
+- **Synchronisation** (palier premium) : vos collections sont sauvegardées côté serveur, sans
+  limite, et peuvent être partagées en lecture seule avec d'autres membres.
 - **Compte** : export de vos données (portabilité) et suppression de compte en un geste.
 
 ## Ce qui reste toujours vrai

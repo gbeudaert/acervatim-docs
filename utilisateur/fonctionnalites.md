@@ -17,13 +17,13 @@ Acervatim est en pré-alpha : l'application n'est pas encore publiée sur le Pla
 - Multi-artistes, vitesse de gravure, déduplication par code-barres et par ISBN.
 - Import/export JSON et CSV, **sauvegarde complète ZIP** avec jaquettes.
 - Thèmes Material You (marque, système, expressif), clair et sombre.
-- Côté serveur (capacités en place mais **pas encore activées dans l'application publiée** — voir « Court terme ») : authentification Google, recherche externe unifiée (Discogs, MyAnimeList, BnF, TMDB), synchronisation des collections (limitée par des quotas pour le palier gratuit, sans limite pour le futur palier premium).
+- Côté serveur (capacités en place mais **pas encore activées dans l'application publiée** — voir « Court terme ») : authentification Google, recherche externe unifiée (Discogs, MangaDex, MyAnimeList, BnF, Google Books, TMDB), synchronisation des collections (limitée par des quotas pour le palier gratuit, sans limite pour le futur palier premium).
 
 ## Court terme
 
 - **Publication Play Store v1.0** : la version 100 % hors-ligne (vinyle + manga), sans compte ni achat intégré.
 - **Activation du mode connecté dans l'application** : connexion Google et recherche dans les bases externes avec **vos propres jetons d'accès** (*bring your own token*), et synchronisation des collections dans la limite des quotas gratuits (10 collections, 500 éléments). La couche technique est en place côté app et côté serveur ; il reste la configuration de production et la gestion des jetons par source.
-- **Enrichissement automatique au scan** : recherche dans les bases externes (via le serveur) pour pré-remplir titre, artiste/auteur, jaquette et métadonnées — par code-barres pour le vinyle (Discogs) et **par ISBN pour le manga** (pivot **BnF → MyAnimeList**, qui retrouve la série et le tome scanné, éditions spéciales comprises — voir [D'où viennent les informations](sources-de-donnees.md)). Aujourd'hui le scan ne fait que pré-remplir le code-barres ; cet enrichissement reste à brancher dans l'app publiée.
+- **Enrichissement automatique au scan** : recherche dans les bases externes (via le serveur) pour pré-remplir titre, artiste/auteur, jaquette et métadonnées — par code-barres pour le vinyle (Discogs) et **par ISBN pour le manga** (pivot **BnF → MangaDex**, MyAnimeList en secours, qui retrouve la série et le tome scanné avec un synopsis souvent en français, éditions spéciales comprises — voir [D'où viennent les informations](sources-de-donnees.md)). Aujourd'hui le scan ne fait que pré-remplir le code-barres ; cet enrichissement reste à brancher dans l'app publiée.
 
 ## Moyen terme
 

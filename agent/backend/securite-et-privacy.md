@@ -36,8 +36,8 @@ Exceptions au JWT : `POST /v1/auth/google` (public), `GET /health`, `POST /webho
 | Mécanisme | Fichier |
 |---|---|
 | Guard premium (402 Payment Required) | `premium/premium.guard.ts` + `payment-required.exception.ts` |
-| Quota items free/premium | `common/quota/quota.service.ts` |
-| Rate limit providers externes | `common/rate-limit/token-bucket.service.ts` |
+| Plafond technique (anti-emballement) | `common/limits/limits.service.ts` |
+| Throttle appels sortants providers (limiters BullMQ, une file/source) | `src/oauth/providers/*.processor.ts` · `src/common/sources/googlebooks/googlebooks.processor.ts` · `src/common/sources/mangadex/mangadex.processor.ts` |
 | Erreurs sans leak d'internals (RFC 9457) | `common/filters/problem-details.filter.ts` |
 | Corrélation requêtes (`requestId`) | `common/interceptors/correlation-id.interceptor.ts` |
 | Audit append-only (login, delete, export, grants) | `common/audit/audit-log.service.ts` |

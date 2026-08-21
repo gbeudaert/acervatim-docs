@@ -76,14 +76,20 @@ propose le bon parcours : **connecter la source** (`/v1/oauth/:provider/start`) 
 |---|---|---|
 | POST | `/v1/auth/google` | Échange un `id_token` Google contre un JWT interne (crée le compte au 1er login). |
 | GET | `/v1/me` | Profil minimal + statut premium. |
-| GET | `/v1/me/quota` | Consommation des quotas du palier gratuit. |
 | GET | `/v1/me/export` | Export complet des données (portabilité RGPD). |
 | DELETE | `/v1/me` | Suppression du compte + données (cascade). |
 
-> **Quotas & synchronisation** : le stockage (collections / items / nœuds) reste accessible au **palier
-> gratuit**, borné par les quotas (`GET /v1/me/quota`) ; le **premium** lève la limite (illimité).
-> Aucune route de synchronisation n'est réservée au premium — seule la **limite** diffère (pas de gate
-> `402` sur la sync).
+> **Synchronisation : premium uniquement.** Le stockage serveur (collections / items / nœuds) a un
+> coût réel, il est donc réservé au palier payant : toutes ces routes répondent `402`
+> (`/probs/payment-required`) à un compte non premium, en écriture **comme en lecture**. Il n'y a
+> plus de palier gratuit borné par des quotas — la notion de quota d'offre a disparu.
+>
+> En lecture, le statut vérifié est celui du **propriétaire** de la collection, pas du demandeur :
+> c'est ce qui permettra à un membre non premium de consulter une collection qu'on lui partage.
+>
+> Il subsiste des plafonds purement **techniques** (anti-emballement), identiques pour tous, très
+> au-dessus de tout usage réel, que rien n'expose et qu'aucun abonnement ne lève ; les atteindre
+> renvoie `409` (`/probs/technical-limit`).
 
 ### Collections
 | Méthode | Route | Rôle |

@@ -1,4 +1,4 @@
-# Sources de données externes (Discogs, MAL, TMDB, BnF)
+# Sources de données externes (Discogs, MangaDex, MAL, TMDB, BnF, Google Books)
 
 > Remonter : [../INDEX.md](../INDEX.md) · Doc humaine associée : [../../utilisateur/sources-de-donnees.md](../../utilisateur/sources-de-donnees.md), [../../developpeur/sources-et-pivot-isbn.md](../../developpeur/sources-et-pivot-isbn.md)
 > Toute la communication avec les providers passe par le **backend** (jamais d'appel direct depuis l'app).
@@ -8,19 +8,21 @@
 | Provider | Type de collection | Auth (jeton résolu, cf. §Résolution des jetons) | Usage |
 |---|---|---|---|
 | **Discogs** | vinyl | BYOT OAuth 1.0a (compte user) → repli premium : personal token Acervatim (`DISCOGS_ACERVATIM_TOKEN`) | Recherche texte + barcode (`database/search?barcode=`), métadonnées albums |
-| **MyAnimeList (MAL)** | manga | BYOT OAuth2 PKCE (compte user) → repli premium : `X-MAL-CLIENT-ID` (`MAL_CLIENT_ID`) | Métadonnées séries (le nœud série porte la source MAL) |
-| **Google Books** | manga (livre) | Clé API optionnelle (`GOOGLE_BOOKS_API_KEY`) | **Jaquette par ISBN/tome** (seule source par volume — MAL n'a que le visuel de série) ; expose aussi `description` (résumé par édition) |
+| **MangaDex** (**principal manga**) | manga | Aucune (API publique) | **Identité série** : synopsis **FR**, note, statut, nb tomes, genres, **jaquettes par tome**, `links.mal` / `links.al`. Source nominale du scan (nœud série `source='mangadex'`) |
+| **MyAnimeList (MAL)** (repli) | manga | BYOT OAuth2 PKCE (compte user) → repli premium : `X-MAL-CLIENT-ID` (`MAL_CLIENT_ID`) | **Repli d'identité** si MangaDex n'identifie pas ; joignable par id via `links.mal` (sync bibliothèque). Recherche texte manga |
+| **Google Books** | manga (livre) | Clé API optionnelle (`GOOGLE_BOOKS_API_KEY`) | **Repli jaquette par ISBN/tome** (quand MangaDex n'a pas le visuel du tome) ; expose aussi `description` (résumé par édition) |
 | **TMDB** | movie | BYOT clé API perso (`PUT /v1/sources/tmdb/token`, pas d'OAuth) → repli premium : clé serveur (`TMDB_API_KEY`) | Recherche + détails films |
-| **BnF (SRU, sans auth)** | manga | Aucune (API publique) | Pivot **ISBN → série/tome FR** ; énumération des tomes d'une édition (`edition-mapping`) |
+| **BnF (SRU, sans auth)** | manga | Aucune (API publique) | Pivot **ISBN → série/tome FR** (titre romaji, auteur, édition) ; énumération des tomes d'une édition (`edition-mapping`) |
 
 ## Architecture côté backend
 
 - **Contrat commun** : `SourceAdapter` / `UnifiedItem` dans `src/oauth/providers/types.ts` (méthodes `search`, `searchByBarcode?`, `mediaType`).
 - **Registre** : token `SOURCE_ADAPTERS` fourni par `src/common/sources/sources.module.ts` ; `SearchService` construit une `Map<typeCode, adapter>`.
-- **Adapters** : `src/oauth/providers/discogs.adapter.ts`, `mal.adapter.ts`, `tmdb.adapter.ts`.
+- **Adapters** : `src/oauth/providers/discogs.adapter.ts`, `mal.adapter.ts`, `tmdb.adapter.ts`. **MangaDex n'a pas d'adapter** (API publique, comme la BnF) : module `src/common/sources/mangadex/` exposant `MangaDexCoverService` (@Global), injecté par `MalAdapter`.
 - **BnF** : `src/common/sources/bnf/` — `bnf.service.ts` (SRU, énumération d'édition), `unimarc.parser.ts` (parsing notices UNIMARC), `bnf.types.ts` (`EditionMapping`).
+- **Rapprochement partagé** : `src/common/sources/manga-matching.ts` — normalisation, tokens auteur, similarité de titre, `PIVOT_TITLE_STRONG`, `isSpecialArtEdition` ; utilisé par le pivot MAL **et** l'identification MangaDex (DRY).
 - **Snapshots** : `src/common/sources/source-snapshot.service.ts` — normalisation des `sources[]` (`{ provider, externalId, rawData, fetchedAt }`) attachées aux items/nodes.
-- **Protections** : cache DB (`common/cache/api-cache.service.ts`), rate limit token-bucket (`common/rate-limit/`), client HTTP commun (`common/http/http-client.service.ts`).
+- **Protections** : cache DB (`common/cache/api-cache.service.ts`), throttle sortant par **limiters BullMQ** (une file par source — remplace l'ancien token-bucket SQL ; cf. [../backend/scan-asynchrone-bullmq.md](../backend/scan-asynchrone-bullmq.md)), client HTTP commun (`common/http/http-client.service.ts`).
 
 ## Résolution des jetons (BYOT / repli premium / mode dégradé)
 
@@ -28,30 +30,36 @@
 
 1. **Jeton utilisateur (BYOT)** présent → on l'utilise.
 2. sinon **premium** → repli sur les **jetons Acervatim** (voir colonne *Auth* ci-dessus), plafonné par un bucket de rate-limit partagé `acervatim:<source>`.
-3. sinon → **mode dégradé** : aucun appel sortant vers une source à jeton ; on sert les sources sans clé (BnF) et le **cache partagé** ; à défaut, `403 source-token-required` (payload `provider`) → l'app propose *connecter la source* **ou** *passer premium*.
+3. sinon → **mode dégradé** : aucun appel sortant vers une source à jeton ; on sert les sources sans clé (BnF, **MangaDex**) et le **cache partagé** ; à défaut, `403 source-token-required` (payload `provider`) → l'app propose *connecter la source* **ou** *passer premium*. **NB** : MangaDex étant sans jeton, le scan manga s'enrichit désormais **même en mode dégradé** (identité + synopsis FR + jaquettes), MAL n'étant qu'un repli à jeton.
 
 Cache de recherche indexé sur la requête publique (`<source>:<requête>`, sans `userId`) → réponses partageables sans fuite (endpoints publics). Doc humaine : [../../developpeur/sources-et-pivot-isbn.md](../../developpeur/sources-et-pivot-isbn.md#résolution-des-jetons-byot--repli-premium--mode-dégradé).
 
-## Pivot ISBN → MAL (manga)
+## Pivot ISBN → MangaDex → MAL repli (manga)
 
-Problème : MAL ne connaît pas les ISBN ; la BnF connaît les éditions FR. Chaîne :
+Problème : MangaDex/MAL ne connaissent pas les ISBN ; la BnF connaît les éditions FR (et porte le titre romaji). Chaîne nominale :
 
 ```
-ISBN scanné → BnF (notice tome FR : titre série, n° tome, mention d'édition)
-           → titre série → MAL (métadonnées série) [source attachée au nœud]
+ISBN scanné → BnF (notice tome FR : titre série + romaji, auteur, n° tome, édition)
+           → MangaDex identify (titre + auteur) → identité série [source='mangadex']
+                { synopsis.fr, links.mal, links.al, note, genres, jaquettes/tome }
+              └─(repli) MangaDex n'identifie pas → MAL (recherche floue) [source='mal']
+                 └─(repli) → notice BnF seule [source='bnf', bnf_only]
            → /v1/search/edition-mapping (BnF) → liste complète des tomes de l'édition
 ```
 
-Doc de conception : [../../developpeur/sources-et-pivot-isbn.md](../../developpeur/sources-et-pivot-isbn.md).
+`source='mangadex'` est un code source **sans adapter** (comme `bnf`) : `SourceSnapshotService` stocke la réf (mangaId) sans snapshot. Le **`mal_id`** est porté en `metadata.pivot` → MAL joignable par id plus tard (sync bibliothèque). Doc de conception : [../../developpeur/sources-et-pivot-isbn.md](../../developpeur/sources-et-pivot-isbn.md).
 
-## Jaquettes par tome (Google Books)
+## Jaquettes par tome (MangaDex → Google Books)
 
-MAL ne fournit qu'une illustration **de série** (`main_picture`) ; la BnF est bibliographique (aucune image). La seule source de jaquette **par volume** est **Google Books**, interrogée **par ISBN** :
+Ni MAL (illustration **de série** `main_picture`) ni la BnF (bibliographique) ne fournissent de jaquette **par volume**. Deux sources en **cascade** :
 
-- Service `common/sources/googlebooks/googlebooks.service.ts` : `resolveCover(isbn)` (réseau, best-effort, cache positif 90 j / négatif 7 j) et `cachedCover(isbn)` (lecture cache-only). Réutilise `HttpClientService` + `ApiCacheService` + `TokenBucketService` comme la BnF ; module `@Global`.
-- `GET /v1/search/cover?isbn=` → `{ coverUrl }` : résout **et** met en cache (source de vérité de la résolution).
-- `GET /v1/search/edition-mapping` : chaque tome porte désormais `coverUrl`, peuplé **depuis le cache uniquement** (aucun appel externe pendant l'énumération → latence inchangée ; le cache est alimenté par `/cover`).
-- Google Books expose aussi `volumeInfo.description` (résumé par édition, HTML) et `averageRating`, mais **ne remplace pas MAL** : il n'a aucune notion de **série** (pas de `num_volumes`, pas de statut de publication, pas d'agrégation série). MAL reste la source du **nœud série** ; Google Books enrichit au **tome** (jaquette, éventuellement résumé).
+- **MangaDex (prioritaire)** — indexée par **série + n° de tome** (préférence locale `fr` > `ja` > `en`), ~80 % des tomes des séries reconnues, **un seul appel** par édition. `MangaDexCoverService.resolveSeriesCovers` (file BullMQ `mangadex`, cache), servi cache-only par `edition-mapping`. Si MangaDex a le tome, **Google Books n'est pas appelé**.
+  - 🎯 **Quelle œuvre MangaDex** (`MangaDexResolver.findManga`) : `mangaId` (identité du scan, porté par `metadata.pivot` et renvoyé à `edition-mapping`/`import-jobs`) → **join direct** ; sinon `malId` (`links.mal`) ; sinon **validation par l'auteur** BnF (auteurs agrégés par l'énumération) avec **préférence `links.mal`** — anti-**variante** (One Piece colorisé `mal=-`, autre édition, partiel). Aucun match validé (bnf_only) → MangaDex `absent` → **full scan ISBN** (Google Books, édition-exact).
+  - ⚠️ **Garde-fou éditions d'art** (`isSpecialArtEdition`) : MangaDex indexe **sans dimension édition** → sur une édition d'art (Colossale/Perfect/Kanzenban/Prestige/deluxe/collector/intégrale/coffret/grand format — visuel **et** numérotation distincts) la jaquette du tome N serait **fausse** ⇒ on **saute MangaDex** et on passe par la cascade ISBN Google Books édition-consciente. Les **retirages** (ordinaux : « Quatorzième éd. », « 2e éd. ») restent traités comme standard.
+- **Google Books (repli, par ISBN)** — `common/sources/googlebooks/googlebooks.service.ts` : `resolveCover(isbn, hint?)` (réseau, best-effort, cache positif 90 j / négatif 7 j), `resolveCoverAndDescription(isbn, hint?)` (idem + résumé du volume, **même appel**), `cachedCover(isbn)` (cache-only) ; module `@Global`, débit sortant via la **file BullMQ `gbooks`** (limiter global + single-flight, a remplacé le token-bucket SQL). **Repli par titre** : si l'ISBN n'a pas d'image et qu'un `hint` BnF est fourni (série + n° de tome + édition), requête `intitle:<série> T<nn>` puis rétention stricte (n° via `seriesInfo.bookDisplayNumber` + édition) — indispensable pour les ISBN papier FR (Ki-oon…).
+- `GET /v1/search/cover?isbn=[&title=&volume=&edition=]` → `{ coverUrl }` : résout **et** met en cache. `title`+`volume` (+`edition`) **arment le repli `intitle:`** ; sans eux, seule la résolution `isbn:` est tentée.
+- `GET /v1/search/edition-mapping` : chaque tome porte `coverUrl`, **`coverSource`** (`mangadex`|`google_books`|`null`) **et `description`**, résolus à **concurrence bornée** (`COVER_RESOLUTION_CONCURRENCY`).
+- Le **résumé par tome** = `330$a` BnF → repli `volumeInfo.description` Google Books → sinon `null` (jamais le synopsis de série). Le **nœud série** (synopsis FR, statut, nb tomes, genres) vient de **MangaDex** (repli MAL) ; Google Books enrichit au **tome** (jaquette + résumé).
 
 ## OAuth utilisateur (connexion de comptes externes)
 

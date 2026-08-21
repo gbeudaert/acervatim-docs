@@ -19,7 +19,7 @@ Cette page explique **quelles sources** sont utilisées et **ce que ça implique
 | Type | Source(s) | Ce qu'on y trouve |
 |---|---|---|
 | **Vinyles / disques** | [Discogs](https://www.discogs.com) | Album, artiste(s), année, pochette, label — recherche par texte **ou par code-barres** (EAN). |
-| **Mangas** | [MyAnimeList](https://myanimelist.net) + [Bibliothèque nationale de France (BnF)](https://catalogue.bnf.fr) + [Google Books](https://books.google.com) | L'**œuvre** (synopsis, démographie, note, auteur) côté MyAnimeList ; l'**édition française** (éditeur, tome, ISBN) côté BnF ; la **jaquette de chaque tome** côté Google Books (par ISBN) — recherche **par ISBN**. |
+| **Mangas** | [MangaDex](https://mangadex.org) + [Bibliothèque nationale de France (BnF)](https://catalogue.bnf.fr), avec [MyAnimeList](https://myanimelist.net) et [Google Books](https://books.google.com) en secours | L'**œuvre** (synopsis **en français**, note, genres, nombre de tomes, jaquettes) côté MangaDex ; l'**édition française** (éditeur, tome, ISBN) côté BnF ; MyAnimeList prend le relais si MangaDex ne reconnaît pas la série, Google Books complète les jaquettes manquantes — recherche **par ISBN**. |
 | **Films** | [TMDB](https://www.themoviedb.org) | Titre, affiche, année, synopsis. |
 
 > L'enrichissement est **optionnel** et **à votre initiative** : l'application reste pleinement
@@ -28,28 +28,31 @@ Cette page explique **quelles sources** sont utilisées et **ce que ça implique
 ## Scanner un manga : retrouver la série et tous ses tomes
 
 Pour les mangas, vous pouvez **scanner le code-barres (ISBN)** d'un tome. À partir de ce seul
-ISBN, Acervatim combine **trois sources complémentaires**, chacune avec son rôle :
+ISBN, Acervatim combine **plusieurs sources complémentaires**, chacune avec son rôle :
 
 1. **BnF** — identifie l'ouvrage dans le catalogue officiel des éditions françaises (titre de
    série, n° de tome, éditeur, ISBN) et sait **énumérer tous les tomes** d'une édition ;
-2. **MyAnimeList** — retrouve la **série** correspondante et ses informations d'ensemble (synopsis,
-   nombre de tomes annoncés, statut de publication, note, visuel de série) ;
-3. **Google Books** — récupère la **jaquette de chaque tome** (par ISBN) — la BnF et MyAnimeList
-   ne fournissent pas d'image par volume.
+2. **MangaDex** — retrouve la **série** et ses informations d'ensemble : **synopsis en français**,
+   note, genres, nombre de tomes, et la **jaquette de chaque tome** (souvent celle de l'édition
+   française). C'est la source principale ;
+3. **MyAnimeList** — n'est sollicité **qu'en secours**, si MangaDex ne reconnaît pas la série ;
+4. **Google Books** — complète une **jaquette de tome** que MangaDex n'aurait pas.
 
 Acervatim vous propose alors la série pour **valider les tomes** d'un coup, chaque tome avec sa
-propre jaquette.
+propre jaquette. Ce scan fonctionne **même sans compte connecté** : MangaDex et la BnF sont des
+sources ouvertes.
 
 ### Comment l'app retrouve la bonne série
 
 La BnF connaît, pour chaque édition française, le **titre d'origine** du manga (celui sous lequel
-l'œuvre est référencée internationalement). Acervatim s'en sert pour interroger MyAnimeList, puis
-**confirme le résultat avec l'auteur** — pas seulement avec le titre. C'est ce double critère qui
-évite les confusions entre deux séries au nom proche : un titre peut ressembler à un autre, mais
-l'auteur tranche.
+l'œuvre est référencée internationalement). Acervatim s'en sert pour interroger MangaDex (puis
+MyAnimeList en secours), et **confirme le résultat avec l'auteur** — pas seulement avec le titre.
+C'est ce double critère qui évite les confusions entre deux séries au nom proche, ou entre une série
+et l'un de ses **spin-offs du même auteur** : un titre peut ressembler à un autre, mais l'auteur (et
+le titre exact) tranchent.
 
 - **Titres proches, bonne série.** Si le titre recherché est **contenu** dans celui d'une série
-  MyAnimeList *et* que l'auteur correspond, la correspondance est considérée comme **certaine**.
+  MangaDex *et* que l'auteur correspond, la correspondance est considérée comme **certaine**.
 - **Titres gardés en version originale.** Beaucoup de mangas conservent leur titre d'origine en France
   (*Black Torch*, *One Piece*…). Même quand la BnF n'indique pas de titre d'origine séparé, Acervatim
   sait retomber sur le titre français — à condition, là encore, que **l'auteur corresponde**.
@@ -63,8 +66,9 @@ ce volume correspond. Vous ne mélangez donc pas une édition collector avec l'�
 
 ### La langue du résumé
 
-Le **résumé** affiché est en **français** lorsque la BnF en fournit un pour l'ouvrage. Sinon, Acervatim
-utilise le résumé de MyAnimeList, qui est **en anglais** (MyAnimeList ne propose pas de résumés
+Le **résumé** affiché est le plus souvent **en français** : MangaDex fournit un synopsis français pour
+la plupart des séries reconnues. À défaut, Acervatim utilise le résumé de la BnF (français) puis, en
+dernier recours, celui de MyAnimeList — **en anglais** (MyAnimeList ne propose pas de résumés
 traduits). Vous pouvez toujours le **modifier** après coup.
 
 > Selon les ouvrages, l'information peut être partielle (séries en cours de publication, petits
@@ -76,7 +80,7 @@ traduits). Vous pouvez toujours le **modifier** après coup.
 Acervatim est conçu **privacy by design**. Concernant ces sources de données :
 
 - Les recherches portent sur **l'objet** (un disque, un livre), **jamais sur vous**. Aucun nom, email
-  ni identifiant personnel n'est transmis à Discogs, MyAnimeList, la BnF, Google Books ou TMDB.
+  ni identifiant personnel n'est transmis à Discogs, MangaDex, MyAnimeList, la BnF, Google Books ou TMDB.
 - En mode **connecté**, les sources sont interrogées avec **vos propres jetons d'accès** (que vous
   renseignez dans les réglages) ; en **premium**, ce sont les jetons Acervatim, gardés côté serveur,
   qui sont utilisés à votre place.
@@ -88,6 +92,6 @@ confidentialité](../legal/confidentialite.md).
 
 ## Pour les développeurs
 
-Le fonctionnement technique (d'où vient chaque champ, le « pivot » ISBN → BnF → MyAnimeList, le
+Le fonctionnement technique (d'où vient chaque champ, le « pivot » ISBN → BnF → MangaDex → MAL, le
 format des réponses) est documenté côté développeur :
 [Sources de données & pivot ISBN](../developpeur/sources-et-pivot-isbn.md).

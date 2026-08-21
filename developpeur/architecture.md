@@ -71,7 +71,7 @@ dépôt `acervatim-backend`.
 ### 3. Enrichissement au scan
 1. App : scan EAN/UPC (vinyle) ou ISBN (manga) via ML Kit.
 2. Dédup **locale** d'abord ; si absent → `GET /v1/search?type=<type>&barcode=<code>` (param `barcode`, **XOR** avec `q`).
-3. Backend : route vers la bonne source (Discogs pour le vinyle ; **MyAnimeList + BnF** pour le manga, via un pivot ISBN → titre original ; TMDB pour les films), cache + quotas, renvoie un **`UnifiedItem`**.
+3. Backend : route vers la bonne source (Discogs pour le vinyle ; **BnF → MangaDex** pour le manga, via un pivot ISBN → titre original, MAL en repli ; TMDB pour les films), cache + quotas, renvoie un **`UnifiedItem`**.
 4. App : pré-remplit le formulaire d'ajout ; le code-barres scanné est persisté sur l'item.
 - Détail dev (provenance des champs, flux scan, pivot ISBN manga) : [Sources de données & pivot ISBN](sources-et-pivot-isbn.md).
 

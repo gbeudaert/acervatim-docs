@@ -30,6 +30,9 @@ exclude:
   - agent/
   - plan-consolidation-documentation.md
   - sprints-conformite-offre.md
+  - spec-macro-partage-collection.md
+  - spec-macro-recherche-tris-galerie.md
+  - spec-macro-export-sources-externes.md
   - private/
   - vendor/
   - Gemfile
