@@ -103,7 +103,9 @@ requérant** :
 
 ### Brique 3 — Le partage lui-même
 
-**Modèle et CRUD livrés le 2026-08-21** (sprint S3) : `CollectionShare` / `CollectionShareMember`,
+**Modèle et CRUD livrés le 2026-08-21** (sprint S3), **UI propriétaire livrée le 2026-08-22**
+(sprint A3 : créer un partage, transmettre le code hors-bande, révoquer un partage ou un membre) :
+`CollectionShare` / `CollectionShareMember`,
 calqués sur le patron `Invitation` existant — code hors-bande, seul le HMAC stocké, pepper dédié
 `SHARE_CODE_PEPPER`. Six routes dans le module `sharing/` (créer, lister, révoquer, éjecter un
 membre, rejoindre, lister ses partages reçus), audit `share.*`, export RGPD des deux sens.
@@ -132,7 +134,7 @@ S2 gate premium sync (owner-aware)       A2 écran Compte : sync premium-only
         ▼                                        │
 S3 modèle + CRUD partages  ✅ FAIT                │
         │                                        ▼
-        │                                A3 UI propriétaire (créer/révoquer)
+        │                                A3 UI propriétaire (créer/révoquer)  ✅ FAIT
         ▼                                        │
 S4 lecture partagée + scopes ◄───────────────────┴──► A4 UI membre (lecture seule)
 ```
@@ -143,7 +145,10 @@ S4 lecture partagée + scopes ◄───────────────�
   différables, mais prérequis de tout chantier web.
 - **S2** peut se faire en parallèle de S3, mais doit précéder la mise en service réelle du partage.
   Les deux sont livrés.
-- **S4 dépend de S1 et S3** ; **A4 dépend de S4**.
+- **S3/A3 sont livrés** : un propriétaire premium peut émettre un code, voir qui a rejoint et
+  révoquer. **Tant que S4 n'est pas là, le membre qui rejoint ne voit rien** — la lecture n'est pas
+  encore étendue. Le chantier n'est donc pas utilisable de bout en bout.
+- **S4 dépend de S1 et S3** ; **A4 dépend de S4**. Ce sont les deux seuls sprints restants.
 
 ## 5. Rétro-compatibilité
 

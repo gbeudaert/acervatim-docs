@@ -58,3 +58,4 @@
 | Premium (vérification achat Play) | idem | `AccountRepository` → `POST /v1/subscriptions/verify` |
 | Code d'invitation | idem | `POST /v1/invitations/redeem` |
 | Suppression de compte | idem | `DELETE /v1/me` — `GET /v1/me/quota` a été **supprimé** (S2/A2 : plus de quota d'offre) |
+| Partage d'une collection (propriétaire) | `ui/sharing/SharingScreen.kt`, `SharingViewModel`, `CreateShareSheet`, `ShareCodeDialog` ; entrée dans `ui/list/CollectionDrawer.kt` | `SharingRepository` → `data/remote/sharing/SharingRepositoryImpl.kt`, `domain/model/sharing/` — `/v1/collections/:id/shares`, `/v1/shares/…` |

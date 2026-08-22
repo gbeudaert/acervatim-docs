@@ -32,6 +32,28 @@
 
 `AccountRepositoryImpl.kt` — implémente `AccountRepository` : `/v1/me`, suppression de compte, statut premium, vérification d'achat Play, rédemption d'invitation. Mapping DTO : `data/remote/mapper/AccountMapper.kt`. UI : `ui/account/AccountScreen.kt`.
 
+## Partages de collection (`data/remote/sharing/`)
+
+`SharingRepositoryImpl.kt` — implémente `domain/repository/SharingRepository` : `POST/GET
+/v1/collections/:id/shares`, `DELETE /v1/shares/:id`, `DELETE /v1/shares/:id/members/:memberUserId`.
+Côté app c'est **le seul** point d'entrée du partage ; le volet membre (`redeem`, `shares/received`)
+n'est pas encore branché (sprint A4).
+
+- **Sans cache.** Un partage n'a pas de vie locale : ni Room, ni DataStore. Seule exception au
+  « tout distant » : `remoteCollectionId(type)` lit le `remoteId` de la collection locale
+  (`CollectionDao`) — le partage porte sur la collection **serveur**, donc une collection jamais
+  synchronisée n'est pas partageable (l'écran le dit au lieu d'échouer).
+- **Le code n'existe qu'une fois.** `POST` le renvoie en clair, le serveur n'en garde que le HMAC.
+  Il ne transite ni par un log, ni par `SavedStateHandle`, ni par aucun stockage — `SharingViewModel`
+  le tient dans un `MutableStateFlow` vidé à la fermeture du dialogue (test dédié).
+- **Erreurs traduites dans la couche data** : `ApiException`/`IOException` →
+  `domain/model/sharing/SharingException` (`PREMIUM_REQUIRED` / `NETWORK` / `UNKNOWN`), pour que
+  l'UI n'ait pas à connaître les statuts HTTP. Le 402 est traité comme un état (premium expiré entre
+  l'affichage et l'action), pas comme une panne : la révocation reste ouverte, seule la création
+  se ferme.
+
+Mapping DTO : `data/remote/mapper/SharingMapper.kt` · DTOs : `data/remote/dto/ShareDto.kt`.
+
 ## Recherche externe (`data/remote/search/`)
 
 `ExternalSearchRepositoryImpl.kt` — implémente `ExternalSearchRepository` : appelle `GET /v1/search` (texte ou code-barres, XOR) et `GET /v1/search/edition-mapping` (énumération d'une édition manga via BnF). Résultats mappés vers `domain/model/ExternalMatch.kt` / `EditionMapping.kt`.

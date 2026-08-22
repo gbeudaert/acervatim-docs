@@ -26,13 +26,16 @@
 | `settings` | `ui/settings/SettingsScreen.kt` | `ui/settings/SettingsViewModel.kt` | Réglages (thème, doublons, backup export/import…) |
 | `settings/collection-types` | `ui/settings/ManageCollectionTypesScreen.kt` | `ui/settings/ManageCollectionTypesViewModel.kt` | Visibilité/gestion des types de collection |
 | `account` | `ui/account/AccountScreen.kt` | `ui/account/AccountViewModel.kt` | Compte Google, sync, premium, invitations, suppression |
+| `sharing/{collectionType}` | `ui/sharing/SharingScreen.kt` | `ui/sharing/SharingViewModel.kt` | Partages émis d'une collection : créer un code, voir les membres, révoquer (propriétaire premium) |
 
 ## Composants réutilisables & UI annexe
 
 | Fichier | Rôle |
 |---|---|
-| `ui/list/CollectionDrawer.kt` | Drawer de sélection du type de collection actif + stats |
+| `ui/list/CollectionDrawer.kt` | Drawer de sélection du type de collection actif + stats ; porte l'entrée « Partager cette collection », affichée aux seuls comptes premium |
 | `ui/list/FilterSheet.kt` | Bottom sheet de filtres/tri de la liste |
+| `ui/sharing/CreateShareSheet.kt` | Bottom sheet de création d'un partage : portée, nombre de personnes, expiration |
+| `ui/sharing/ShareCodeDialog.kt` | Affichage **unique** du code créé (copier / partager via…) — il n'est jamais réaffiché |
 | `ui/list/SeriesGrid.kt` | Grille des séries (mode manga) |
 | `ui/series/VolumeTile.kt` | Tuile d'un tome dans le détail série |
 | `ui/components/RecordRow.kt` | Ligne d'item dans la liste |

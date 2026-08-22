@@ -35,6 +35,7 @@ ui/  (Compose + ViewModel)  →  domain/ (modèles, interfaces, use cases)  ← 
 | `AccountRepository` | Profil `/me`, suppression compte, premium, invitations | `data/remote/account/AccountRepositoryImpl.kt` |
 | `ExternalSearchRepository` | Recherche externe via backend (`/v1/search`) | `data/remote/search/ExternalSearchRepositoryImpl.kt` |
 | `SyncRepository` | Synchronisation locale ↔ backend | `data/remote/sync/SyncManagerImpl.kt` |
+| `SharingRepository` | Partages émis d'une collection (créer / lister / révoquer) | `data/remote/sharing/SharingRepositoryImpl.kt` |
 
 ## Modèles domaine (`domain/model/`)
 
