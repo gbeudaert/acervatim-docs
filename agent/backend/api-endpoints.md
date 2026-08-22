@@ -18,7 +18,7 @@
 |---|---|---|---|
 | `POST /v1/auth/google` **[public]** | `auth/auth.controller.ts` | `auth/auth.service.ts` | idToken Google → JWT interne ; résolution/création user via `identity-resolver.service.ts` |
 | `GET /v1/me` | `users/users.controller.ts` | `users/users.service.ts` | Profil (id opaque, dates, premium) |
-| `GET /v1/me/export` | idem | idem | Export RGPD des données : `user`, `collections`, `collectionNodes`, `items`, `oauthCredentials` (chiffrés), `subscription`, `premiumGrant`, `invitationRedemptions`, `auditLogs` |
+| `GET /v1/me/export` | idem | idem | Export RGPD des données : `user`, `collections`, `collectionNodes`, `items`, `oauthCredentials` (chiffrés), `subscription`, `premiumGrant`, `invitationRedemptions`, `collectionShares` (partages émis, sans `codeHash`), `shareMemberships` (partages rejoints), `auditLogs` |
 | `DELETE /v1/me` | idem | idem | Suppression compte (cascade Prisma) |
 
 ## Collections / Nodes / Items — **premium-only depuis S2**
@@ -107,3 +107,27 @@ Cron de réconciliation : `subscriptions/subscriptions.cron.ts`. Statuts : `subs
 |---|---|---|
 | `POST /v1/admin/invitations` **[admin]** | `invitations/invitations.controller.ts` | Protégé par `admin-token.guard.ts` (token admin, pas JWT user). Code retourné une seule fois |
 | `POST /v1/invitations/redeem` | idem | JWT requis ; code haché HMAC comparé à `Invitation.codeHash` ; peut créer un `PremiumGrant` |
+
+## Partage de collection — **S3 (modèle + CRUD)**
+
+> Le partage n'ouvre **aucune route de lecture** : il étend l'autorisation des routes
+> `collections`/`items`/`nodes` ci-dessus, ce qui reste à faire (S4). Après S3, un membre a rejoint
+> mais ne voit encore rien de la collection.
+> Modèle et décisions : [partage-de-collection.md](partage-de-collection.md).
+
+| Route | Controller | Notes |
+|---|---|---|
+| `POST /v1/collections/:id/shares` | `sharing/sharing.controller.ts` | JWT + `PremiumGuard` (**requérant**) + propriétaire. `{ scope: all\|owned\|wantlist, maxUses?, expiresAt? }` → `{ id, code, … }`. Code en clair **une seule fois** ; seul son HMAC (`SHARE_CODE_PEPPER`) est stocké |
+| `GET /v1/collections/:id/shares` | idem | Propriétaire. Partages **non révoqués** (les expirés restent listés, `expiresAt` le dit) + membres actifs (`memberUserId` opaque, `redeemedAt`) |
+| `DELETE /v1/shares/:id` | idem | Propriétaire. Révoque le partage **et** tous ses membres (marquage `revokedAt`, jamais de suppression physique). `204`, idempotent |
+| `DELETE /v1/shares/:id/members/:memberUserId` | idem | Propriétaire. Éjecte un membre ; le code reste valide pour les autres et ne le fait pas revenir. `204`, idempotent |
+| `POST /v1/shares/redeem` | idem | JWT, **pas** de gate premium (c'est le propriétaire qui paie le stockage). `{ code }` → adhésion + résumé de collection. Idempotent (`alreadyMember`). Bucket throttle dédié 5/min |
+| `GET /v1/shares/received` | idem | Partages que j'ai rejoints et qui vivent encore (`shareId`, `collectionId`, `scope`, `redeemedAt`, résumé de collection) |
+
+- **Aucun oracle d'existence** : code inconnu, révoqué, expiré, épuisé ou membre éjecté renvoient
+  tous le même `404` `/probs/share-code-invalid`, même `detail`. Seul le propriétaire qui tente de
+  rejoindre son propre partage obtient un `400` distinct — il connaît déjà son code.
+- `usedCount` est incrémenté sous **garde optimiste** (`updateMany where usedCount < maxUses`) dans
+  la transaction du redeem : deux redeems concurrents sur la dernière place ne passent pas tous deux.
+- Audit : `share.create`, `share.revoke`, `share.member.revoke`, `share.redeem` (`target = shareId`,
+  `metadata = { scope }`), jamais le code.

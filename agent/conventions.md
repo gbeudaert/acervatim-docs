@@ -9,7 +9,7 @@
 - Identité = `users.googleSubHash` (HMAC-SHA-256 du `sub` avec `SUB_HASH_PEPPER`). `users.id` = UUID v4 opaque.
 - Jamais de `sub`, email ou token OAuth en clair dans les logs (préfixe de hash pour debug : `subHash.slice(0, 8) + '…'`).
 - Tokens OAuth externes stockés chiffrés AES-256-GCM (`AesService`).
-- Secrets non rotables sans plan de migration : `SUB_HASH_PEPPER`, `ENCRYPTION_KEY`, `JWT_PRIVATE_KEY`, `INVITE_CODE_PEPPER`.
+- Secrets non rotables sans plan de migration : `SUB_HASH_PEPPER`, `ENCRYPTION_KEY`, `JWT_PRIVATE_KEY`, `INVITE_CODE_PEPPER`, `SHARE_CODE_PEPPER`.
 
 ## Commandes backend — toujours via le wrapper
 

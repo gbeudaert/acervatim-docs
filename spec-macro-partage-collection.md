@@ -33,10 +33,13 @@ Le partage a rouvert la définition de l'offre. Modèle acté le 2026-08-20, dé
 > les jetons Acervatim) **est premium** ; **tout ce qui n'en a pas** (enrichissement en BYOT, usage
 > local) **reste gratuit, sans quota artificiel.** Un seul palier payant, à prix bas.
 
-Conséquences directes sur le code existant :
-- La sync (`collections`/`items`/`nodes`) devient **premium-only** — aujourd'hui elle est ouverte au
-  gratuit sous quota (10 collections / 500 items).
-- `common/quota/` perd sa raison d'être produit (à retirer ou requalifier en plafond technique).
+Conséquences sur le code — **toutes livrées le 2026-08-21** (sprints S2 backend et A2 app) :
+- La sync (`collections`/`items`/`nodes`) est **premium-only** : `PremiumGuard` en écriture (statut
+  du **requérant**), `CollectionPremiumGuard` en lecture (statut du **propriétaire** — condition
+  pour que le partage reste lisible par un membre gratuit, cf. §2 de la brique 2).
+- `common/quota/` a été **requalifié** en `common/limits/` : plafond **technique** anti-emballement,
+  identique pour tous, non communiqué, que payer ne lève pas → `409 technical-limit` et non `402`.
+  `GET /v1/me/quota` a été supprimé, et le canal quota retiré de l'app.
 - Le partage s'ajoute comme fonctionnalité premium : il dépend de la sync cloud.
 
 ## 3. Les trois briques à construire
@@ -100,8 +103,11 @@ requérant** :
 
 ### Brique 3 — Le partage lui-même
 
-Modèle `CollectionShare` / `CollectionShareMember`, calqué sur le patron `Invitation` existant :
-code hors-bande, seul le HMAC stocké, pepper dédié `SHARE_CODE_PEPPER`.
+**Modèle et CRUD livrés le 2026-08-21** (sprint S3) : `CollectionShare` / `CollectionShareMember`,
+calqués sur le patron `Invitation` existant — code hors-bande, seul le HMAC stocké, pepper dédié
+`SHARE_CODE_PEPPER`. Six routes dans le module `sharing/` (créer, lister, révoquer, éjecter un
+membre, rejoindre, lister ses partages reçus), audit `share.*`, export RGPD des deux sens.
+**Reste S4** : tant que la lecture n'est pas étendue, un membre rejoint mais ne voit rien.
 
 **Pourquoi un code et pas « inviter par email »** : les comptes sont anonymes (`googleSubHash`,
 aucun email ni nom en base). Chercher un membre par identifiant est structurellement impossible et
@@ -124,7 +130,7 @@ S1 statut item (userData.status) ◄──────► A1 canal userData + pu
 S2 gate premium sync (owner-aware)       A2 écran Compte : sync premium-only
         │                                        │
         ▼                                        │
-S3 modèle + CRUD partages                        │
+S3 modèle + CRUD partages  ✅ FAIT                │
         │                                        ▼
         │                                A3 UI propriétaire (créer/révoquer)
         ▼                                        │
@@ -136,6 +142,7 @@ S4 lecture partagée + scopes ◄───────────────�
 - **S1bis/A1bis sont jumeaux** et servent la **version web**, pas le partage. Parallélisables ou
   différables, mais prérequis de tout chantier web.
 - **S2** peut se faire en parallèle de S3, mais doit précéder la mise en service réelle du partage.
+  Les deux sont livrés.
 - **S4 dépend de S1 et S3** ; **A4 dépend de S4**.
 
 ## 5. Rétro-compatibilité
@@ -154,7 +161,8 @@ S4 lecture partagée + scopes ◄───────────────�
   [sprints-conformite-offre.md](sprints-conformite-offre.md).
 - Que devient un partage émis quand le propriétaire perd son statut premium : suspension (402)
   plutôt que suppression, à confirmer.
-- Anti-abus sur le nombre de partages/membres par collection : pas de limite produit décidée.
+- Anti-abus sur le nombre de partages/membres par collection : pas de limite produit décidée. S3 ne
+  borne que le `maxUses` d'un code (≤ 100, validation de DTO), pas le nombre de partages.
 - Notification du propriétaire quand un membre rejoint : hors périmètre v1 (le pull sur
   `GET /v1/collections/:id/shares` suffit).
 

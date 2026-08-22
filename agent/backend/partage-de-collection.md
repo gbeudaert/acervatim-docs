@@ -1,6 +1,6 @@
 # acervatim-backend — Partage de collection entre membres (spec)
 
-> Remonter : [INDEX.md](INDEX.md) · Statut : **spécifié, non implémenté** (2026-08-20)
+> Remonter : [INDEX.md](INDEX.md) · Statut : **modèle et CRUD livrés** (S3, 2026-08-21) ; **lecture partagée à faire** (S4)
 > Fonctionnalité **Premium** (cf. [../../sprints-conformite-offre.md](../../sprints-conformite-offre.md) — Sprint C4bis).
 > Décisions produit : partage **par collection** (pas par compte entier), accès **lecture seule**
 > pour le membre (pas d'édition).
@@ -45,6 +45,18 @@ Ce qui est en place :
    filtre (comportement voulu, pas une migration à écrire : la majorité des items d'une collection
    sont possédés). Ils se re-poussent naturellement au push suivant.
 
+## Où en est le chantier
+
+| Brique | État |
+|---|---|
+| Statut d'item synchronisé (`userData.status`) | ✅ livré (S1/A1) |
+| Gate premium sur la sync, owner-aware en lecture | ✅ livré (S2/A2) |
+| Modèle `CollectionShare` + CRUD des partages | ✅ livré (S3) — module `src/sharing/`, six routes, audit, export RGPD |
+| Lecture partagée + filtrage par `scope` | ⬜ à faire (S4) — `resolveAccess` ne connaît encore que le rôle `owner` |
+
+Conséquence de cet état : un membre peut rejoindre un partage, il apparaît côté propriétaire, mais
+**il ne voit rien de la collection** tant que S4 n'a pas étendu l'autorisation de lecture.
+
 ## Modèle de données
 
 ```
@@ -82,6 +94,20 @@ Suppression de compte d'un membre → ses `CollectionShareMember` cascadent via 
 | `POST /v1/shares/redeem` | Membre (JWT) | `{ code }` → crée `CollectionShareMember`, retourne un résumé de la collection |
 | `GET /v1/shares/received` | Membre | Collections partagées avec moi (`shareId`, `scope`, `redeemedAt`, `collectionId`) |
 
+Livré tel quel en S3 (`src/sharing/sharing.controller.ts`), avec trois choix d'implémentation qui
+n'étaient pas dans la spec initiale :
+
+- **Aucun oracle d'existence** : code inconnu, révoqué, expiré, épuisé, ou membre déjà éjecté →
+  un seul `404` `/probs/share-code-invalid`, même `detail`. Un statut distinct par état *serait*
+  l'oracle qu'on refuse. Seul le propriétaire qui tente de rejoindre son propre partage obtient un
+  `400` explicite — il connaît déjà son code.
+- **Redeem idempotent** (`alreadyMember: true`) : re-jouer ne consomme pas de place. L'incrément de
+  `usedCount` est gardé par un `updateMany where usedCount < maxUses` dans la transaction, comme
+  pour les invitations.
+- **Révocation = marquage** (`revokedAt`), jamais de suppression : révoquer un partage marque aussi
+  ses membres, et un membre éjecté ne revient pas avec le même code — sinon l'éjection ne servirait
+  à rien tant que le partage vit.
+
 Pas de routes de lecture dédiées : **étendre l'autorisation existante** de
 `collections/items/nodes`. Aujourd'hui l'accès est implicitement `userId = @CurrentUserId()` ; le
 service de résolution devient `resolveAccess(userId, collectionId) → { role: 'owner' } |
@@ -112,7 +138,7 @@ Réutiliser/étendre le pattern déjà en place pour `matchingCollectionIds`
 
 `IGNORED` est exclu de `OWNED` et de `WANTLIST` (visible seulement en `ALL`).
 
-## Sécurité, vie privée, quotas
+## Sécurité, vie privée, plafonds
 
 - **Rate-limit** sur `POST /v1/shares/redeem` (par IP/JWT) pour empêcher le brute-force de code —
   même besoin que pour `POST /v1/invitations/redeem`.

@@ -10,7 +10,7 @@
 Application de gestion de collections personnelles (vinyles, mangas, extensible à d'autres types) :
 
 - **`acervatim-app/`** — app Android (Kotlin, Jetpack Compose, offline-first : Room = vérité locale, sync optionnelle vers le backend).
-- **`acervatim-backend/`** — API REST (NestJS 10, Prisma 6, MariaDB) : compte Google anonymisé, sync des collections, recherche externe (Discogs/MAL/BnF), premium/abonnements Google Play, invitations.
+- **`acervatim-backend/`** — API REST (NestJS 10, Prisma 6, MariaDB) : compte Google anonymisé, sync des collections, recherche externe (Discogs/MAL/BnF), premium/abonnements Google Play, invitations, partage de collection.
 - **`acervatim-docs/`** — ce dépôt : site Jekyll public (doc utilisateur/développeur/légal, lisible par humains) **+ la présente doc agent** sous `agent/` (exclue du site publié).
 
 ## Comment naviguer (routage par intention)

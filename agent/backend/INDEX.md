@@ -24,6 +24,7 @@ src/
 ├── premium/        — PremiumGuard + résolution du statut premium
 ├── subscriptions/  — Google Play : verify, webhook RTDN, cron de réconciliation
 ├── invitations/    — codes d'invitation anonymes (admin + redeem)
+├── sharing/        — partage d'une collection : CollectionShare + codes hors-bande (S3)
 ├── prisma/         — PrismaService/module
 ├── config/         — validation des variables d'env
 └── common/         — audit, cache, crypto, decorators, filters, guards, http,
@@ -42,7 +43,7 @@ src/
 | [operations-dev.md](operations-dev.md) | Wrapper dev.ps1, workflow Prisma, tests, déploiement |
 | [scan-asynchrone-bullmq.md](scan-asynchrone-bullmq.md) | **Chantier en cours** : passerelle sources BullMQ+Redis (throttle global, single-flight). P0 gbooks implémenté (branche `feat/p0-bullmq-gbooks`) ; état + suite |
 | [pivot-vs-pipeline-enrichissement.md](pivot-vs-pipeline-enrichissement.md) | **Réflexion non tranchée** : *Kingdom* introuvable côté jaquettes MangaDex (matching trop strict) + Sakamoto Days/Hellsing introuvables (BnF pas encore à jour, aucun repli) → limites structurelles du pivot ; pistes de correction |
-| [partage-de-collection.md](partage-de-collection.md) | **Spécifié, non implémenté** : partage d'une collection entre membres (tout/possédés/wantlist), lecture seule, fonctionnalité Premium — modèle `CollectionShare`, prérequis bloquant sur `Item.userData.status` |
+| [partage-de-collection.md](partage-de-collection.md) | Partage d'une collection entre membres (tout/possédés/wantlist), lecture seule, Premium côté propriétaire. **Modèle + CRUD livrés (S3)** ; il reste la **lecture filtrée par portée** (S4) — sans elle, un membre rejoint mais ne voit rien |
 
 ## Concepts clés (à connaître avant de toucher au code)
 

@@ -16,6 +16,7 @@
 | `oauth/` | `oauth.service.ts`, `oauth-flow.registry.ts`, `providers/` | Flows OAuth user : `discogs.adapter.ts` (OAuth 1.0a, cf. `providers/oauth1.ts`), `mal.adapter.ts` (OAuth2 PKCE, cf. `providers/pkce.ts`), `tmdb.adapter.ts`. Tokens chiffrés via `AesService`. `providers/types.ts` définit `SourceAdapter`/`UnifiedItem` (aussi utilisés par search) |
 | `premium/` | `premium.service.ts`, `premium.guard.ts`, `payment-required.exception.ts` | Statut premium = `Subscription` active OU `PremiumGrant` valide ; guard 402 sur les features payantes |
 | `subscriptions/` | `subscriptions.service.ts`, `google-play.service.ts`, `pubsub-verifier.service.ts`, `subscriptions.cron.ts`, `subscription-status.ts` | Vérification d'achat Play, webhook RTDN (Pub/Sub), machine à états des statuts, cron de réconciliation des subs qui expirent |
+| `sharing/` | `sharing.service.ts`, `sharing.controller.ts`, `share-scope.ts`, `share-code-invalid.exception.ts` | Partage d'une collection en lecture (S3) : modèle `CollectionShare`, code hors-bande HMAC (`SHARE_CODE_PEPPER`), création/révocation/redeem. **Aucune route de lecture** — le filtrage par portée est le travail de S4 |
 | `invitations/` | `invitations.service.ts`, `admin-token.guard.ts`, exceptions dédiées | Création admin (code HMAC-hashé) + redeem user (grant premium éventuel). DTOs encore en class-validator (migration prévue) |
 | `prisma/` | `prisma.service.ts` | Client Prisma injectable |
 | `config/` | `env.validation.ts` | Validation stricte des variables d'environnement au boot |

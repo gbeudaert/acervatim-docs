@@ -42,7 +42,7 @@ métadonnées ; ça ne conditionne jamais l'usage de base.
 
 ### Backend (`acervatim-backend`)
 - API REST versionnée `/v1/*`, NestJS + Prisma + MariaDB.
-- Rôles : authentification (Google → JWT interne), CRUD des collections/items/nodes, **proxy de recherche externe** unifiée, quotas/premium, invitations.
+- Rôles : authentification (Google → JWT interne), CRUD des collections/items/nodes, **proxy de recherche externe** unifiée, premium, invitations.
 - Contrat : [Référence API](api-reference.md) · `openapi.json` (dépôt `acervatim-backend`).
 
 ## Déploiement

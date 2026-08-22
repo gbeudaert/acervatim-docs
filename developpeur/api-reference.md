@@ -76,7 +76,7 @@ propose le bon parcours : **connecter la source** (`/v1/oauth/:provider/start`) 
 |---|---|---|
 | POST | `/v1/auth/google` | Échange un `id_token` Google contre un JWT interne (crée le compte au 1er login). |
 | GET | `/v1/me` | Profil minimal + statut premium. |
-| GET | `/v1/me/export` | Export complet des données (portabilité RGPD). |
+| GET | `/v1/me/export` | Export complet des données (portabilité RGPD), partages émis et rejoints compris. |
 | DELETE | `/v1/me` | Suppression du compte + données (cascade). |
 
 > **Synchronisation : premium uniquement.** Le stockage serveur (collections / items / nœuds) a un
@@ -144,6 +144,30 @@ propose le bon parcours : **connecter la source** (`/v1/oauth/:provider/start`) 
 |---|---|---|
 | PUT | `/v1/sources/tmdb/token` | Enregistre/remplace la **clé API TMDB personnelle** (TMDB n'a pas d'OAuth). Stockée chiffrée (`oauth_credentials`, provider `tmdb`). |
 | DELETE | `/v1/sources/tmdb/token` | Révoque la clé TMDB personnelle. |
+
+### Partage de collection
+| Méthode | Route | Rôle |
+|---|---|---|
+| POST | `/v1/collections/:id/shares` | Émettre un code de partage sur une de ses collections (**premium**). Le code en clair n'est renvoyé qu'ici : seul son empreinte est stockée. |
+| GET | `/v1/collections/:id/shares` | Partages en cours de la collection et membres qui les ont rejoints. |
+| DELETE | `/v1/shares/:id` | Révoquer un partage : le code cesse de fonctionner et tous ses membres perdent l'accès. |
+| DELETE | `/v1/shares/:id/members/:memberUserId` | Retirer un seul membre ; le code reste valide pour les autres. |
+| POST | `/v1/shares/redeem` | Rejoindre une collection partagée avec un code. **Ne demande pas le premium** : c'est le propriétaire qui paie le stockage. |
+| GET | `/v1/shares/received` | Collections partagées avec moi. |
+
+> **Portée** (`scope`) choisie à l'émission : `all` (toute la collection), `owned` (seulement les
+> éléments possédés) ou `wantlist` (seulement les éléments désirés). Elle est fixée côté serveur —
+> un membre ne peut pas la réclamer plus large que ce qui a été partagé.
+>
+> **Pourquoi un code et pas une invitation par email** : les comptes sont anonymes, il n'y a ni
+> email ni nom en base. Le code voyage donc hors-bande (message, papier, à voix haute).
+>
+> **État** : le modèle et ces six routes existent ; le **filtrage de lecture** par portée est le
+> chantier suivant. Un membre qui rejoint aujourd'hui apparaît côté propriétaire mais ne voit pas
+> encore le contenu de la collection.
+>
+> Un code inconnu, révoqué, expiré ou épuisé renvoie la **même** erreur `404`
+> (`/probs/share-code-invalid`) : la réponse ne dit jamais si un code existe.
 
 ### Premium & invitations
 | Méthode | Route | Rôle |

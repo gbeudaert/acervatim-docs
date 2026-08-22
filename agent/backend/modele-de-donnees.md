@@ -9,6 +9,7 @@
 User ─┬─ Collection ─┬─ Item            (albums / tomes)
       │              └─ CollectionNode  (séries manga, arbre via parentId)
       │                      └─ Item    (tomes rattachés au nœud)
+      ├─ CollectionShare ── CollectionShareMember   (partage d'une collection)
       ├─ OauthCredential                (tokens externes chiffrés)
       ├─ Subscription / PremiumGrant    (premium)
       └─ InvitationRedemption ── Invitation
@@ -29,6 +30,8 @@ AuditLog · ApiCache                     (techniques, sans FK user obligatoire)
 | `PremiumGrant` (`premium_grants`) | Premium hors billing | `reason` (`self/beta_tester/comp/support/admin`), `expiresAt` null = permanent |
 | `Invitation` (`invitations`) | Codes d'invitation | PK = `codeHash` (HMAC, jamais le code en clair) ; `maxUses`/`usedCount` ; peut porter un grant premium |
 | `InvitationRedemption` (`invitation_redemptions`) | Trace de claim | PK `[invitationCodeHash, userId]` : un user ne re-claim pas le même code |
+| `CollectionShare` (`collection_shares`) | Partage d'une collection | `codeHash` unique (HMAC + `SHARE_CODE_PEPPER` — pepper **dédié**, ces codes sont émis par n'importe quel user) ; `scope` (`all/owned/wantlist`) ; `maxUses`/`usedCount` ; `expiresAt` borne le **code**, pas l'adhésion ; `revokedAt` = marquage, jamais de suppression |
+| `CollectionShareMember` (`collection_share_members`) | Membre ayant consommé un code | PK `[shareId, memberUserId]` : on ne rejoint qu'une fois ; `revokedAt` éjecte un membre sans toucher au partage — et le code ne le fait pas revenir |
 | `AuditLog` (`audit_logs`) | Journal append-only | Aucun update/delete exposé (`common/audit/audit-log.service.ts`) ; actions `auth.login`, `user.delete`, `premium.grant`, … |
 | `ApiCache` (`api_cache`) | Cache réponses providers | TTL applicatif : rows expirées purgées par cron |
 
@@ -38,7 +41,7 @@ AuditLog · ApiCache                     (techniques, sans FK user obligatoire)
 
 - Tout nouveau champ sur `users` doit passer le check « est-ce que ça réidentifie un humain ? » (cf. [securite-et-privacy.md](securite-et-privacy.md)).
 - `unifiedData` / `sources` / `userData` : ne jamais mélanger les trois rôles (curé / brut externe / subjectif).
-- Suppressions : cascades Prisma en place (`onDelete: Cascade`) depuis `User` — la suppression de compte s'appuie dessus.
+- Suppressions : cascades Prisma en place (`onDelete: Cascade`) depuis `User` — la suppression de compte s'appuie dessus. Côté partage : le compte propriétaire tombe → `Collection` → `CollectionShare` → `CollectionShareMember` ; le compte d'un membre tombe → ses `CollectionShareMember` via `User`.
 - `Item.userId` est dénormalisé volontairement (requêtes par user sans join).
 - Schéma des `userData` d'item : `src/items/dto/item-user-data.schema.ts` ; des `userData` de nœud : `src/nodes/dto/node-user-data.schema.ts` (`note` 0–10, `comment`, voyageant **à plat** dans le PATCH) ; schémas `unifiedData` par type : `src/collections/types/{vinyl,manga,fallback}.ts`.
 - Le **code-barres** n'a qu'une source de vérité : `sources[]` avec `provider: 'barcode'`. Il n'est plus un champ de `unifiedData` (retiré silencieusement à la validation, cf. [contrat-app-serveur.md](contrat-app-serveur.md)).

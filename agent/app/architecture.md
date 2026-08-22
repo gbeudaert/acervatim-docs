@@ -32,7 +32,7 @@ ui/  (Compose + ViewModel)  →  domain/ (modèles, interfaces, use cases)  ← 
 | `CoverStorage` | Fichiers image des pochettes/couvertures | `data/local/storage/CoverStorageImpl.kt` |
 | `BackupGateway` | Export/import ZIP | `data/backup/BackupGatewayImpl.kt` |
 | `AuthRepository` | Sign-in Google, session, tokens | `data/remote/auth/AuthRepositoryImpl.kt` |
-| `AccountRepository` | Profil `/me`, quota, suppression compte, premium, invitations | `data/remote/account/AccountRepositoryImpl.kt` |
+| `AccountRepository` | Profil `/me`, suppression compte, premium, invitations | `data/remote/account/AccountRepositoryImpl.kt` |
 | `ExternalSearchRepository` | Recherche externe via backend (`/v1/search`) | `data/remote/search/ExternalSearchRepositoryImpl.kt` |
 | `SyncRepository` | Synchronisation locale ↔ backend | `data/remote/sync/SyncManagerImpl.kt` |
 

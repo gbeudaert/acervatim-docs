@@ -18,6 +18,7 @@ Exceptions au JWT : `POST /v1/auth/google` (public), `GET /health`, `POST /webho
 - Aucun log avec `sub`, email ou token OAuth en clair ; debug = `subHash.slice(0, 8) + '…'`.
 - Tout nouveau champ `users` ⇒ check de réidentification avant merge.
 - Codes d'invitation : seul le HMAC est stocké (`INVITE_CODE_PEPPER`), le code en clair n'est retourné qu'à la création.
+- Codes de partage de collection : même patron, pepper **dédié** `SHARE_CODE_PEPPER` (émis par n'importe quel utilisateur, donc surface et rotation différentes). Tout refus de redeem sort en un seul `404` `/probs/share-code-invalid` — distinguer « inconnu » de « révoqué » donnerait un oracle d'existence.
 
 ## Chiffrement
 
@@ -26,10 +27,11 @@ Exceptions au JWT : `POST /v1/auth/google` (public), `GET /health`, `POST /webho
 | Tokens OAuth externes (Discogs/MAL/TMDB) | AES-256-GCM, clé `ENCRYPTION_KEY`, versionnée (`encryptedWithKeyVersion`) | `common/crypto/aes.service.ts`, table `oauth_credentials` |
 | Identité Google | HMAC-SHA-256 + `SUB_HASH_PEPPER` | `common/crypto/hash.service.ts` |
 | Codes d'invitation | HMAC-SHA-256 + `INVITE_CODE_PEPPER` | idem |
+| Codes de partage | HMAC-SHA-256 + `SHARE_CODE_PEPPER` | idem |
 
 ## Secrets critiques (non rotables sans plan de migration)
 
-`SUB_HASH_PEPPER` (perdre = perdre tous les comptes) · `ENCRYPTION_KEY` · `JWT_PRIVATE_KEY` · `INVITE_CODE_PEPPER`. Validés au boot par `config/env.validation.ts`. Jamais committés (`.env` gitignored).
+`SUB_HASH_PEPPER` (perdre = perdre tous les comptes) · `ENCRYPTION_KEY` · `JWT_PRIVATE_KEY` · `INVITE_CODE_PEPPER` · `SHARE_CODE_PEPPER` (perdre = invalider tous les codes de partage en circulation). Validés au boot par `config/env.validation.ts`. Jamais committés (`.env` gitignored).
 
 ## Garde-fous applicatifs
 
@@ -40,6 +42,6 @@ Exceptions au JWT : `POST /v1/auth/google` (public), `GET /health`, `POST /webho
 | Throttle appels sortants providers (limiters BullMQ, une file/source) | `src/oauth/providers/*.processor.ts` · `src/common/sources/googlebooks/googlebooks.processor.ts` · `src/common/sources/mangadex/mangadex.processor.ts` |
 | Erreurs sans leak d'internals (RFC 9457) | `common/filters/problem-details.filter.ts` |
 | Corrélation requêtes (`requestId`) | `common/interceptors/correlation-id.interceptor.ts` |
-| Audit append-only (login, delete, export, grants) | `common/audit/audit-log.service.ts` |
+| Audit append-only (login, delete, export, grants, `share.*`) | `common/audit/audit-log.service.ts` |
 | Validation env stricte | `config/env.validation.ts` |
 | Whitelist des filtres query (anti injection) | `common/filters/parse-filters.ts` |

@@ -57,4 +57,4 @@
 | Synchronisation cloud | idem | `SyncRepository` → `SyncManagerImpl`, `SyncWorker` — voir [reseau-sync-compte.md](reseau-sync-compte.md) |
 | Premium (vérification achat Play) | idem | `AccountRepository` → `POST /v1/subscriptions/verify` |
 | Code d'invitation | idem | `POST /v1/invitations/redeem` |
-| Suppression de compte / quota | idem | `DELETE /v1/me`, `GET /v1/me/quota` |
+| Suppression de compte | idem | `DELETE /v1/me` — `GET /v1/me/quota` a été **supprimé** (S2/A2 : plus de quota d'offre) |
