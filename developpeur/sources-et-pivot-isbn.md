@@ -2,7 +2,7 @@
 title: Sources de données & pivot ISBN
 layout: default
 parent: Développeur
-nav_order: 7
+nav_order: 8
 ---
 
 # Sources de données & pivot ISBN → MangaDex (MAL en repli)
@@ -102,16 +102,21 @@ BnF → MangaDex**, MAL n'étant plus sollicité qu'en dernier recours.
 ```
 ISBN (EAN-13)
  └─(A) BnF SRU ── recherche par ISBN ─────────────▶ notice UNIMARC
+        │
+        │  ISBN inconnu de la BnF (bnf_not_found) ─▶ (A') Google Books  q=isbn:<isbn> ──▶ titre
+        │        └─(B') échelle de troncature ──▶ préfixes candidats ──▶ (C)
+        │
         └─(B) extraction ──▶ titre original (454$t), titre FR (200$a), titre série (461$t),
                │             édition (205), plage de tomes source (454$h), éditeur (210/214$c),
                │             auteur (700), note FR (330), ISBN (010), ARK (003)
-               └─(C) MangaDex ── q = <romaji 454$t> sinon <titre FR 200$a> ──▶ candidats
+               └─(C) MangaDex ── q = <romaji 454$t> sinon <titre FR 200$a> sinon <préfixe B'> ──▶ candidats
                       └─(D) désambiguïsation ── score = titre + AUTEUR ──▶ identité
                              │   { mangaId, synopsis.fr, links.mal, links.al, note, genres,
                              │     jaquettes par tome } → item source='mangadex' (mal_id porté)
                              └─(repli) MangaDex n'identifie pas ──▶ MyAnimeList (recherche floue,
                                         score titre+auteur+type) ──▶ item source='mal'
                                         └─(repli) ──▶ notice BnF seule (source='bnf', bnf_only)
+                                        └─(repli, voie A') ──▶ item minimal (source='gbooks', gbooks_only)
                              ─────────▶ UnifiedItem (série) + metadata.scannedTome
 ```
 
@@ -144,6 +149,45 @@ Zones extraites → `BnfNotice` :
 | `700$a/$b` | `authors` | Auteur structuré (nom / prénom). |
 | `330$a` | `noteFr` | **Note de résumé en français** (souvent absente pour les mangas) → synopsis. |
 | `003` | `ark` | Identifiant pérenne BnF. |
+
+### Étape A'+B' — repli Google Books quand la BnF est muette {#repli-google-books}
+
+La BnF ne connaît pas tous les ISBN : une **parution récente** (retard de catalogage du dépôt légal) ou
+un **éditeur non français** (préfixes belges, suisses…) donnent `numberOfRecords 0`. Tout le pivot étant
+conditionné à la notice, le scan renvoyait alors une **liste vide** alors que la série existe chez
+MangaDex — seul le maillon d'entrée manquait. Le repli le rouvre :
+
+1. **Titre par ISBN** — `GET /books/v1/volumes?q=isbn:<isbn>` donne le **titre commercial** du tome, ses
+   auteurs (présents dans **42 %** des notices manga FR mesurées) et sa date. Même file `gbooks` que les
+   jaquettes : un seul throttle sortant, un seul cache, single-flight par ISBN.
+2. **Échelle de troncature** — le titre Google n'est pas normalisé (`One Piece Tome 112`, `Frieren`,
+   `Chainsaw Man Tome 18 . Edition collector`, voire du déchet de coffret) et le champ structuré
+   `seriesInfo.bookDisplayNumber` est **vide sur les 137 tomes mesurés** : le n° de tome ne peut venir
+   que du titre. Comme MangaDex ne tolère aucun bruit (`title=One Piece Tome 112` → `total=0`), on
+   retire les tokens **par la fin**, du titre complet au plus court, et on interroge à chaque échelon
+   jusqu'au **premier préfixe accepté**. Le n° de tome retenu est celui de la queue retirée du préfixe
+   **gagnant** : il n'est cru que parce que le préfixe, lui, a matché.
+3. **Un seul garde-fou, non linguistique** : on ne tronque que si la queue retirée **contient un
+   chiffre**. Pas de liste de mots (« Tome », « T. », « vol. ») — les titres ne sont pas normalisés, une
+   telle liste serait fausse pour la moitié du corpus. Sans ce garde-fou, `Instinct grégaire` (tome
+   Ki-oon) se tronquerait en `Instinct` et matcherait une série réellement nommée *Instinct*.
+
+Seul `bnf_not_found` emprunte cette voie. Une panne BnF (`bnf_unavailable`, `bnf_unparsable`) est
+**transitoire** : y greffer un repli dégraderait la qualité pendant un incident au lieu de laisser
+l'app retenter.
+
+**Acceptation renforcée en l'absence d'auteur.** Sans notice BnF, le validateur habituel (match auteur)
+manque une fois sur deux. L'identification expose donc un drapeau **`ambiguous`** — un autre candidat
+atteint le même score de titre — et le repli **refuse** quand `ambiguous` et qu'aucun auteur n'a matché.
+C'est ce qui écarte le crossover *Frieren Cinnamoroll Kamigata* sur la requête d'un seul token
+« Frieren », **sans** toucher au seuil `PIVOT_TITLE_STRONG` du chemin nominal. Quand Google fournit les
+auteurs, ils redeviennent l'arbitre et la vraie série (*Sousou no Frieren*) est retenue.
+
+**Taux mesuré** sur 137 tomes numérotés passés dans le chemin réel : **98 résolus (~72 %)**, ~84 % en
+écartant les coffrets/goodies et les 6 ISBN absents de Google Books. Réserve de méthode : l'échantillon
+est fait d'ISBN que la BnF **possède**, alors que le repli ne se déclenche que quand elle est muette —
+sur les nouveautés et les éditeurs non français, la distribution des formes de titre est probablement
+moins favorable.
 
 ### Étape C+D — MangaDex (identité principale) {#identite-mangadex}
 `MangaDexResolver.identify` (`src/common/sources/mangadex/mangadex.resolver.ts`), orchestré par
@@ -259,6 +303,13 @@ Le **synopsis** (`description`) dépend du chemin :
 **`malId`** (`links.mal`), **`anilistId`** (`links.al`) et **`mangaId`** ; `metadata` porte aussi
 `rating`, `num_volumes` (dérivé de `lastVolume`), `status` et `genres`.
 
+`resolutionPath` dit par où l'identité est passée : `bnf+mangadex` / `bnf+mangadex-fr` (nominal),
+`bnf+mal` / `bnf+mal-fr` (repli MAL), `bnf_only`, et — voie Google Books —
+**`gbooks+mangadex`** ou **`gbooks_only`**. Sur cette voie, `scannedTome` est renseigné par ce que
+Google fournit (`titleFr` = titre commercial, `seriesTitleFr` = préfixe gagnant, `volume` = n° extrait)
+et les champs proprement BnF (`edition`, `publisherFr`, `sourceVolumeRange`) restent `null` : personne
+ne les a fournis, on ne fabrique pas de fausse notice.
+
 ### Repli `bnf_only` — la notice BnF n'est jamais jetée {#repli-bnf-only}
 
 Quand MyAnimeList **n'enrichit pas** — pas de jeton ni de hit de cache (mode dégradé), aucun candidat
@@ -275,6 +326,17 @@ stocke la référence sans snapshot (le `mangaId` / l'ARK suffit).
 > Avec le pivot MangaDex, `bnf_only` devient **plus rare** : MangaDex étant sans jeton, l'identification
 > aboutit désormais même sans compte MAL. `bnf_only` ne subsiste que si **ni** MangaDex **ni** MAL
 > n'identifient (aucun candidat validé, ou titre inexploitable).
+
+### Repli `gbooks_only` — un item minimal plutôt qu'un écran vide {#repli-gbooks-only}
+
+Sur la voie Google Books, quand **aucun préfixe** n'identifie de série (titre du tome seul, coffret,
+goodies) ou que l'identification est refusée pour ambiguïté, le backend rend un **item minimal**
+`source: 'gbooks'`, `resolutionPath: 'gbooks_only'` : titre Google, auteurs, jaquette et n° de tome
+extrait. Objectif : que l'app enchaîne sur la **saisie manuelle** au lieu d'un « aucun résultat » muet.
+Aucun nom de série n'est deviné — aucun préfixe n'ayant été validé, en inventer un ferait passer une
+hypothèse pour une donnée. Si **Google non plus** ne connaît pas l'ISBN, le résultat est vide.
+
+`gbooks` rejoint `bnf` et `mangadex` parmi les codes source **sans adapter dédié** (`ITEM_SOURCE_CODES`).
 
 ## Éditions collector (ex. Colossale)
 
@@ -438,17 +500,26 @@ Le process est tracé explicitement (préfixes `bnf:`, `pivot:`, `mangadex:`) :
 [MalAdapter] pivot: mangadex no match isbn=... -> repli MAL
 [MalAdapter] pivot: bnf->mal query="Tokyo toritsu" via=454$t requireAuthor=false author="Akutami"
 [MalAdapter] pivot: retained mal_id=115710 titleSim=1.00 authorMatch=true typeOk=true confidence=1.00
+# … ou, si la BnF ne connaît pas l'ISBN :
+[MalAdapter] pivot: bnf_not_found isbn=9782808703437 -> repli Google Books
+[MalAdapter] pivot: gbooks title isbn=... title="Sentenced to be a Hero Tome 1" authors=0 echelons=3
+[MalAdapter] pivot: retained via gbooks+mangadex isbn=... prefix="Sentenced to be a Hero" cut=2
+             tome=1 requetes=3 mangaId=... mal_id=151361 authorMatch=false confidence=0.49
 ```
 
 On loggue : ce que la BnF a parsé, l'identification MangaDex (mangaId, mal_id porté, `matchedBy`,
-`confidence`, présence du synopsis FR), le **repli MAL** le cas échéant (requête + provenance
-`via=454$t` / `via=titleFr(fallback)`, candidats bruts, ce qu'on retient).
+`confidence`, `ambiguous`, présence du synopsis FR), le **repli MAL** le cas échéant (requête +
+provenance `via=454$t` / `via=titleFr(fallback)`, candidats bruts, ce qu'on retient), et sur la voie
+Google Books le **préfixe essayé**, le nombre de requêtes MangaDex et la raison du refus — c'est ce qui
+rend le taux de succès du repli mesurable en production.
 
 ## Modes d'échec & fallbacks
 
 | Situation | Comportement |
 |---|---|
-| ISBN absent du catalogue BnF | `unresolved` (`bnf_not_found`). |
+| ISBN absent du catalogue BnF (`bnf_not_found`) | **repli Google Books** : titre par ISBN → échelle de troncature → MangaDex (`gbooks+mangadex`), sinon item minimal (`gbooks_only`), sinon liste vide. |
+| BnF indisponible / réponse illisible (`bnf_unavailable`, `bnf_unparsable`) | Liste vide, **sans** repli : panne transitoire, l'app retente. |
+| Voie Google Books, identification ambiguë sans auteur | **Refus** (`gbooks_only`) : on préfère la saisie manuelle à un faux positif. |
 | MangaDex indisponible / aucun candidat validé | **repli MAL** (pivot flou), puis `bnf_only` si MAL n'aboutit pas non plus. |
 | Notice sans `454` ni `500` (titre conservé en graphie latine, ou catalogage incomplet) | **repli sur le titre FR** (`200$a`) pour MangaDex puis MAL → `bnf+mangadex-fr` / `bnf+mal-fr`. Sur MAL, **match auteur obligatoire**. |
 | Notice sans titre FR **ni** original | `bnf_only` via le titre de série (`461$t`) si présent, sinon résultat vide ; aucune requête MangaDex/MAL. |
@@ -490,6 +561,10 @@ serveur** (pas de trigramme SQL : la base est MariaDB).
   aucun résumé localisé) faute de `330$a` BnF.
 - **Score de confiance** : similarité de titre (contenance / Dice sur bigrammes) + auteur (+ type côté
   MAL, + bonus titre exact côté MangaDex) ; pas de distance de Levenshtein (le Dice suffit en pratique).
+- **Repli Google Books** : ne peut rien pour les ISBN dont Google renvoie le **titre du tome** sans nom
+  de série (Ki-oon, vieux One Piece Glénat) ni pour les ISBN qu'il ne connaît pas du tout (6/137 sur
+  l'échantillon) — l'information n'existe pas, aucun parsing ne la fabriquera. Ces scans ressortent en
+  `gbooks_only` (item minimal) ou vides.
 
 ## Voir aussi
 

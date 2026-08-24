@@ -10,7 +10,7 @@
 | **Discogs** | vinyl | BYOT OAuth 1.0a (compte user) → repli premium : personal token Acervatim (`DISCOGS_ACERVATIM_TOKEN`) | Recherche texte + barcode (`database/search?barcode=`), métadonnées albums |
 | **MangaDex** (**principal manga**) | manga | Aucune (API publique) | **Identité série** : synopsis **FR**, note, statut, nb tomes, genres, **jaquettes par tome**, `links.mal` / `links.al`. Source nominale du scan (nœud série `source='mangadex'`) |
 | **MyAnimeList (MAL)** (repli) | manga | BYOT OAuth2 PKCE (compte user) → repli premium : `X-MAL-CLIENT-ID` (`MAL_CLIENT_ID`) | **Repli d'identité** si MangaDex n'identifie pas ; joignable par id via `links.mal` (sync bibliothèque). Recherche texte manga |
-| **Google Books** | manga (livre) | Clé API optionnelle (`GOOGLE_BOOKS_API_KEY`) | **Repli jaquette par ISBN/tome** (quand MangaDex n'a pas le visuel du tome) ; expose aussi `description` (résumé par édition) |
+| **Google Books** | manga (livre) | Clé API optionnelle (`GOOGLE_BOOKS_API_KEY`) | **Repli jaquette par ISBN/tome** (quand MangaDex n'a pas le visuel du tome) ; expose aussi `description` (résumé par édition) et le **titre par ISBN** (job `volume-info`), maillon d'entrée du repli quand la BnF ignore l'ISBN |
 | **TMDB** | movie | BYOT clé API perso (`PUT /v1/sources/tmdb/token`, pas d'OAuth) → repli premium : clé serveur (`TMDB_API_KEY`) | Recherche + détails films |
 | **BnF (SRU, sans auth)** | manga | Aucune (API publique) | Pivot **ISBN → série/tome FR** (titre romaji, auteur, édition) ; énumération des tomes d'une édition (`edition-mapping`) |
 
@@ -40,6 +40,9 @@ Problème : MangaDex/MAL ne connaissent pas les ISBN ; la BnF connaît les édit
 
 ```
 ISBN scanné → BnF (notice tome FR : titre série + romaji, auteur, n° tome, édition)
+           │  └─(BnF muette, bnf_not_found) → Google Books q=isbn: → titre → échelle de troncature
+           │        → MangaDex identify (préfixe + auteurs Google) [resolutionPath='gbooks+mangadex']
+           │        └─(repli) → item minimal [source='gbooks', gbooks_only] → sinon liste vide
            → MangaDex identify (titre + auteur) → identité série [source='mangadex']
                 { synopsis.fr, links.mal, links.al, note, genres, jaquettes/tome }
               └─(repli) MangaDex n'identifie pas → MAL (recherche floue) [source='mal']
@@ -47,7 +50,16 @@ ISBN scanné → BnF (notice tome FR : titre série + romaji, auteur, n° tome, 
            → /v1/search/edition-mapping (BnF) → liste complète des tomes de l'édition
 ```
 
-`source='mangadex'` est un code source **sans adapter** (comme `bnf`) : `SourceSnapshotService` stocke la réf (mangaId) sans snapshot. Le **`mal_id`** est porté en `metadata.pivot` → MAL joignable par id plus tard (sync bibliothèque). Doc de conception : [../../developpeur/sources-et-pivot-isbn.md](../../developpeur/sources-et-pivot-isbn.md).
+`source='mangadex'` est un code source **sans adapter** (comme `bnf` et `gbooks`) : `SourceSnapshotService` stocke la réf (mangaId) sans snapshot. Le **`mal_id`** est porté en `metadata.pivot` → MAL joignable par id plus tard (sync bibliothèque). Doc de conception : [../../developpeur/sources-et-pivot-isbn.md](../../developpeur/sources-et-pivot-isbn.md).
+
+### Repli Google Books (ISBN inconnu de la BnF)
+
+Déclenché par le **seul** `bnf_not_found` (nouveauté non cataloguée, éditeur non français) — `bnf_unavailable` / `bnf_unparsable` sont transitoires et ne replient pas. Chaîne : `GoogleBooksCoverService.resolveVolumeInfo(isbn)` (job `volume-info` de la file `gbooks`, cache HIT/MISS/FAIL comme la jaquette) → `titleLadder()` (`common/sources/title-ladder.ts`) → `identifySeries(préfixe, auteurs Google)`.
+
+- 🪜 **Échelle** : on retire les tokens par la fin, du titre complet au plus court (≤ 6), et on s'arrête au **premier préfixe accepté** par MangaDex. Le n° de tome est le **dernier entier de la queue retirée** du préfixe gagnant. `seriesInfo.bookDisplayNumber` est vide sur 137/137 tomes mesurés : le tome ne peut venir que du titre.
+- 🛡️ **Un seul garde-fou**, non linguistique : ne tronquer que si la queue retirée **contient un chiffre**. Aucune liste de mots (« Tome », « T. »…) — sans le garde-chiffre, `Instinct grégaire` → `Instinct` matcherait une autre série.
+- ⚖️ **`MangaDexIdentity.ambiguous`** (un autre candidat à égalité de `titleScore`) : ignoré par le chemin nominal (l'auteur BnF tranche), **rejette** côté repli quand aucun auteur n'a matché — c'est ce qui écarte *Frieren Cinnamoroll Kamigata*. Calculé **toujours** et porté par l'identité cachée (clé `mangadex:identify:v2:` — pas de paramètre de mode, qui empoisonnerait le cache partagé entre les deux chemins).
+- 📈 Taux mesuré : **98/137 (~72 %)**, ~84 % hors coffrets/goodies et ISBN absents de Google.
 
 ## Jaquettes par tome (MangaDex → Google Books)
 
