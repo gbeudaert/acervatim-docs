@@ -54,9 +54,23 @@ L'icône d'affichage, à droite de la barre de recherche, propose trois densité
 
 Les rubriques d'écoute s'appuient sur le compteur d'écoutes : chaque *Je viens de l'écouter* incrémente un total, en plus de la date de dernière écoute. Le compteur suit votre compte quand la synchronisation est active.
 
+### Trier la collection
+
+L'icône de tri, dans la barre de recherche, est **séparée du panneau de filtres** : filtrer réduit ce que vous voyez, trier réorganise ce qui reste. Six ordres sont proposés :
+
+- **Artiste** (l'ordre par défaut) et **Titre** ;
+- **Année**, **Dernière écoute**, **Ajout récent** et **Note**.
+
+Le champ actif porte une coche et une flèche indiquant le sens. Le rechoisir inverse l'ordre ; en choisir un autre part du sens le plus naturel — les écoutes récentes, les ajouts récents et les meilleures notes arrivent en tête, les noms vont de A à Z. Le choix est mémorisé **par collection**, et il survit au bouton *Réinitialiser* du panneau de filtres.
+
+Deux détails voulus :
+
+- les éléments **sans valeur** ferment toujours la marche — un disque jamais écouté n'ouvre pas un tri par dernière écoute, même en inversant l'ordre ;
+- les **en-têtes alphabétiques** n'apparaissent que si l'ordre est alphabétique. Sur un tri par année ou par dernière écoute, la liste coule d'un seul tenant plutôt que d'afficher des lettres qui ne voudraient rien dire.
+
 ### Lecture de la liste
 
-- Les entrées sont triées par artiste, avec des en-têtes alphabétiques collants.
+- Par défaut, les entrées sont triées par artiste, avec des en-têtes alphabétiques collants.
 - Un bandeau discret sous la recherche récapitule la collection : `128 disques · 12 souhaités`.
 - Les éléments en **wishlist** apparaissent **grisés avec une icône cœur** : vous voyez d'un coup d'œil ce que vous possédez et ce que vous cherchez encore.
 - Pour les albums à plusieurs artistes, un réglage permet de choisir entre une entrée par artiste (l'album apparaît sous chaque nom) ou une seule entrée sous l'artiste principal.

@@ -11,7 +11,7 @@ quand on ajoute, dans sa propre collection quand on la parcourt.
 | # | Évolution | Où est le travail |
 |---|---|---|
 | 1 | [Recherche textuelle vers les bases externes](#1--recherche-textuelle-vers-les-bases-externes) | ~90 % app (le backend sait déjà le faire) |
-| 2 | [Tris et filtres dans l'app](#2--tris-et-filtres-dans-lapp) | App (backend seulement pour le web) |
+| 2 | [Tris et filtres dans l'app](#2--tris-et-filtres-dans-lapp) | ✅ Livré — app (AD2), 2026-08-24 ; backend toujours différé (web) |
 | 3 | [Vue galerie](#3--vue-galerie) | ✅ Livré — serveur (SD3) puis app (AD3), 2026-08-24 |
 
 Elles sont **indépendantes** : ni ordre imposé, ni dépendance croisée. Deux liens utiles seulement :
@@ -69,27 +69,41 @@ gratuit sans compte Discogs relié recevra un 403. L'UI doit le dire clairement 
 
 Trier par date de dernière écoute, par genre, etc. Aujourd'hui l'ordre est **figé**.
 
-### L'état réel du code
+### Ce qui a été livré (AD2)
 
-- `RecordFilter` porte des filtres (`query`, `status`, `genre`, `format`,
-  `notPlayedSinceSixMonths`) mais **aucun champ de tri**.
-- La requête Room ordonne par `r.id, ra.position` (ordre technique, nécessaire au regroupement des
-  artistes), puis `RecordRepositoryImpl` retrie **en mémoire** avec un comparateur figé
-  (`RECORD_BY_PRIMARY_ARTIST`, ou `RECORD_BY_VOLUME` pour les tomes).
-- Il y a donc déjà un tri, mais il n'est **pas choisissable**.
+- `RecordSort` (champ + sens) vit **à côté** de `RecordFilter`, pas dedans : restreindre et
+  ordonner sont deux gestes distincts, et « réinitialiser les filtres » ne reprend pas la main sur
+  l'ordre. Champs : artiste, titre, année, dernière écoute, ajout, note.
+- Le tri est **descendu en SQL** (`RecordQueries`, exécuté en `@RawQuery`) : `RecordRepositoryImpl`
+  ne retrie plus rien en mémoire. Le sélecteur vit dans la barre de recherche, séparé du
+  `FilterSheet`, et le choix est persisté **par type de collection** (`sort_<TYPE>`).
+- Les valeurs absentes ferment la marche **dans les deux sens**, et un départage `titre` puis `id`
+  rend l'ordre total : deux disques de même clé ne permutent plus d'un affichage à l'autre.
+- Les en-têtes alphabétiques ne s'affichent **que** si l'ordre est alphabétique (artiste ou titre).
 
-### Les deux points durs
+### Les deux points durs, et ce qu'ils sont devenus
 
-**Le tri en mémoire.** Trier après regroupement suppose de charger toute la collection. C'est
-indolore sur 200 disques, moins sur 5 000 — et l'évolution 3 (galerie) augmente la pression. Le tri
-doit descendre dans SQL. Attention : le regroupement disque × artistes impose de trier sur une
-requête de disques, pas sur les lignes jointes.
+**Le tri en mémoire.** Réglé : le regroupement disque × artistes imposait de trier sur des disques
+et non sur les lignes jointes, donc l'artiste principal passe par une sous-requête corrélée. Un
+piège s'est révélé à l'implémentation : `COLLATE NOCASE` doit être **hors** de cette sous-requête,
+sinon l'`ORDER BY` retombe en comparaison binaire et range toutes les majuscules avant toutes les
+minuscules. Seul le test qui confronte l'ordre SQL à celui du comparateur l'a vu.
 
-**Le genre.** L'app est **mono-genre** (colonne `genre` unique, filtre en égalité stricte), le
-serveur est **pluriel** (`genre: string[]`). Trier ou filtrer « par genre » sur un modèle mono-genre
-donnera un résultat pauvre dès qu'un disque relève de deux genres. Passer l'app au pluriel est un
-changement large (modèle, formulaire, UI, mapper) — c'est une dette connue, à arbitrer
-explicitement : la traiter dans ce chantier, ou assumer le mono-genre et le documenter.
+Une part de tri reste en mémoire, assumée : le mode « doublons par artiste », où un disque à trois
+artistes doit se ranger à trois endroits différents — ce qu'un `ORDER BY` sur des disques ne peut
+pas exprimer. Les collections **partagées** n'ont pas de SQL du tout et s'appuient sur le
+comparateur jumeau de `RecordOrdering`.
+
+**Le genre. Tranché le 2026-08-24 : dette assumée et datée.** L'app reste **mono-genre**, et le
+genre reste un **filtre** — il n'entre pas dans les champs de tri (trier par genre reviendrait à
+grouper, ce qui est un autre besoin). Le passage au pluriel toucherait le modèle, la migration
+Room, le formulaire, l'UI et `FacadeMapper` : c'est un chantier à part, sans rapport avec le fait
+de rendre l'ordre choisissable. Le schéma backend étant déjà pluriel (`genre: string[]`), le canal
+reste ouvert.
+
+**Limite assumée** : ni la requête ni le comparateur n'appliquent de collation locale, donc un
+titre accentué se range après « Z ». Les deux moteurs restent d'accord entre eux — c'est
+l'invariant qui compte, et il est testé.
 
 ### Backend : pas nécessaire maintenant
 
@@ -171,7 +185,9 @@ collection reste à mesurer sur appareil, il n'est pas prouvé ici.
 
 ## Points ouverts (transverses)
 
-- **Genre mono vs pluriel** (évolution 2) : traiter la dette ou l'assumer ?
+- ~~**Genre mono vs pluriel** (évolution 2)~~ : tranché le 2026-08-24 — **dette assumée**, l'app
+  reste mono-genre et le genre reste un filtre. Le schéma backend est déjà pluriel, le canal reste
+  ouvert le jour où la décision produit sera prise.
 - ~~**Compteur vs historique d'écoutes** (évolution 3)~~ : tranché le 2026-08-24 — **compteur**
   (`userData.playCount`), livré serveur (SD3) et app (AD3). L'historique reste écarté, pas oublié.
 - **Tri serveur** : différé au chantier web, mais le curseur composite est à concevoir à ce

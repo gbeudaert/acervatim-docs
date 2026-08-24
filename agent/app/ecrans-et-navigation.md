@@ -42,6 +42,7 @@
 | `ui/sharing/ShareCodeDialog.kt` | Affichage **unique** du code créé (copier / partager via…) — il n'est jamais réaffiché ; rappelle ce que le code ouvre |
 | `ui/sharing/ShareLabelDialog.kt` | Renommage d'un partage, des deux côtés. Le libellé est privé de chaque côté : aucun ne franchit la frontière |
 | `ui/sharing/received/JoinShareDialog.kt` | Saisie d'un code + libellé privé. Pas de capitalisation automatique : un code base64url est sensible à la casse |
+| `ui/list/SortAction.kt` | Sélecteur de tri de la barre de recherche. **Distinct** du `FilterSheet` : ordonner et restreindre sont deux gestes, et le tri se change bien plus souvent |
 | `ui/list/SeriesGrid.kt` | Grille des séries (densité grille, défaut manga) |
 | `ui/list/SeriesList.kt` | Liste des séries (densité liste) — même contenu, même sélection que la grille |
 | `ui/list/CollectionTileBody.kt` | Corps **en tuiles** : grille (une rubrique sans titre) et galerie (rubriques d'écoute). Porte aussi `DisplayModeAction`, la bascule liste/grille/galerie de la barre de recherche |

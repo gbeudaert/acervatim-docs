@@ -62,6 +62,7 @@
 | Invitations, codes | `be:invitations/` |
 | Wishlist | `app:domain/usecase/ToggleWishlistUseCase.kt` · `CollectionNode.isWishlist` |
 | Rating, note, dernière écoute, compteur d'écoutes | `app:domain/usecase/UpdateRatingUseCase.kt`, `MarkAsPlayedUseCase.kt` (incrémente `playCount`) · `userData.playCount` côté serveur |
+| Tri de la liste, ordre d'affichage | `app:domain/model/RecordSort.kt` · `app:data/local/db/RecordQueries.kt` (SQL) · `app:domain/model/RecordOrdering.kt` (comparateur jumeau, collections partagées) |
 | Galerie, grille, densité d'affichage | `app:ui/list/CollectionTileBody.kt` · `app:domain/model/DisplayMode.kt` (axe **orthogonal** à `ListMode`) |
 | Thème, couleurs | `app:ui/theme/` |
 | Settings, préférences, DataStore | `app:data/local/settings/DataStoreSettingsRepository.kt` · `app:ui/settings/` |

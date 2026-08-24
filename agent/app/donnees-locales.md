@@ -18,13 +18,14 @@ Base : `AcervatimDatabase.kt`. Migrations manuelles : `Migrations.kt`. Convertis
 ### Projections & mappers
 
 - `RecordWithArtistsRow.kt` — row record + artistes joints.
+- `RecordQueries.kt` — construit la requête « collection filtrée **et triée** » (`SupportSQLiteQuery`, exécutée en `@RawQuery`) : l'`ORDER BY` dépend du `RecordSort`, ce qu'une `@Query` figée ne sait pas exprimer. Absents en fin de liste dans les deux sens, départage `titre` puis `id`.
 - `SeriesWithCountsRow.kt` — série + compteurs (tomes possédés / total) + agrégats d'écoute des tomes (`MAX(lastPlayedAt)`, `SUM(playCount)`), qui alimentent les rubriques de la galerie.
 - `RecordMapper.kt`, `SeriesMapper.kt` — entity ↔ modèle domaine.
 - `data/repository/LocalCollectionResolver.kt` — résolution de la collection locale cible (par type) lors des écritures.
 
 ## Préférences (`data/local/settings/`)
 
-`DataStoreSettingsRepository.kt` — implémentation `SettingsRepository` sur Jetpack DataStore : type de collection actif, visibilité des types, mode de liste **et densité d'affichage** par type (`list_mode_<TYPE>` / `display_mode_<TYPE>`), réglage doublons, thème, etc.
+`DataStoreSettingsRepository.kt` — implémentation `SettingsRepository` sur Jetpack DataStore : type de collection actif, visibilité des types, mode de liste, densité d'affichage **et tri** par type (`list_mode_<TYPE>` / `display_mode_<TYPE>` / `sort_<TYPE>`, ce dernier au format `CHAMP:SENS`), réglage doublons, thème, etc.
 
 ## Stockage des couvertures (`data/local/storage/`)
 

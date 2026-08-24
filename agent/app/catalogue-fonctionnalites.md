@@ -8,7 +8,8 @@
 | Fonctionnalité | UI | Logique / données |
 |---|---|---|
 | Liste de la collection (albums ou séries selon type actif) | `ui/list/CollectionScreen.kt`, `CollectionViewModel`, `SeriesGrid`, `RecordRow` | `ObserveFilteredRecordsUseCase`, `ObserveSeriesWithCountsUseCase`, `ObserveActiveCollectionTypeUseCase` |
-| Filtres & tri (genre, statut, recherche, mode liste) | `ui/list/FilterSheet.kt` | `domain/model/RecordFilter.kt`, `ListMode`, `ObserveDistinctGenresUseCase`, `ListModeForCollectionTypeUseCases` |
+| Filtres (genre, statut, recherche, mode liste) | `ui/list/FilterSheet.kt` | `domain/model/RecordFilter.kt`, `ListMode`, `ObserveDistinctGenresUseCase`, `ListModeForCollectionTypeUseCases` |
+| Tri de la collection (artiste, titre, année, dernière écoute, ajout, note) | `ui/list/SortAction.kt` (barre de recherche, **distinct** du FilterSheet) | `domain/model/RecordSort.kt`, `data/local/db/RecordQueries.kt` (ORDER BY), `SortForCollectionTypeUseCases` (persisté par type) |
 | Densité d'affichage (liste / grille / galerie) | `ui/list/CollectionTileBody.kt` (`DisplayModeAction`), `SeriesList`, `SeriesGrid` | `domain/model/DisplayMode.kt`, `DisplayModeForCollectionTypeUseCases` (persisté par type) |
 | Galerie : derniers écoutés, plus écoutés, oubliés | `ui/list/CollectionTileBody.kt` | `CollectionUiState.from` (rubriques bornées, vides masquées) ; `Record.playCount` / agrégats `SeriesWithCounts` |
 | Drawer types de collection + statistiques | `ui/list/CollectionDrawer.kt` | `ObserveCollectionTypeStatsUseCase`, `ObserveCollectionStatsUseCase`, `SetActiveCollectionTypeUseCase` |
