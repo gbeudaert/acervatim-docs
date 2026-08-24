@@ -9,6 +9,8 @@
 |---|---|---|
 | Liste de la collection (albums ou séries selon type actif) | `ui/list/CollectionScreen.kt`, `CollectionViewModel`, `SeriesGrid`, `RecordRow` | `ObserveFilteredRecordsUseCase`, `ObserveSeriesWithCountsUseCase`, `ObserveActiveCollectionTypeUseCase` |
 | Filtres & tri (genre, statut, recherche, mode liste) | `ui/list/FilterSheet.kt` | `domain/model/RecordFilter.kt`, `ListMode`, `ObserveDistinctGenresUseCase`, `ListModeForCollectionTypeUseCases` |
+| Densité d'affichage (liste / grille / galerie) | `ui/list/CollectionTileBody.kt` (`DisplayModeAction`), `SeriesList`, `SeriesGrid` | `domain/model/DisplayMode.kt`, `DisplayModeForCollectionTypeUseCases` (persisté par type) |
+| Galerie : derniers écoutés, plus écoutés, oubliés | `ui/list/CollectionTileBody.kt` | `CollectionUiState.from` (rubriques bornées, vides masquées) ; `Record.playCount` / agrégats `SeriesWithCounts` |
 | Drawer types de collection + statistiques | `ui/list/CollectionDrawer.kt` | `ObserveCollectionTypeStatsUseCase`, `ObserveCollectionStatsUseCase`, `SetActiveCollectionTypeUseCase` |
 | Détail album vinyle | `ui/detail/RecordDetailScreen.kt` | `ObserveRecordByIdUseCase` |
 | Détail tome manga | `ui/manga/MangaDetailScreen.kt` | idem + `MangaExtras` |
@@ -38,7 +40,7 @@
 | Fonctionnalité | Logique |
 |---|---|
 | Note (rating) | `UpdateRatingUseCase` |
-| « Écouté / lu » + dernière écoute | `MarkAsPlayedUseCase`, `ResetLastPlayedUseCase`, `ui/util/RelativeTime.kt` |
+| « Écouté / lu » + dernière écoute + **compteur d'écoutes** | `MarkAsPlayedUseCase` (incrémente `Record.playCount` avec l'horodatage), `ResetLastPlayedUseCase`, `ui/util/RelativeTime.kt` |
 | Wishlist | `ToggleWishlistUseCase`, `UpdateItemStatusUseCase`, `domain/model/ItemStatus.kt` |
 
 ## Réglages & données

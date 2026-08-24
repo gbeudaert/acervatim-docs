@@ -11,7 +11,7 @@
 
 | Route | Écran (composable) | ViewModel | Rôle |
 |---|---|---|---|
-| `collection` (start) | `ui/list/CollectionScreen.kt` | `ui/list/CollectionViewModel.kt` | Liste principale de la collection active (albums ou grille de séries) |
+| `collection` (start) | `ui/list/CollectionScreen.kt` | `ui/list/CollectionViewModel.kt` | Collection active, dans la densité choisie (liste / grille / galerie), à plat ou par séries |
 | `record/add?barcode=` | `ui/edit/AddEditRecordScreen.kt` | `ui/edit/AddEditRecordViewModel.kt` | Ajout d'un album (préremplissable par scan) |
 | `record/{recordId}` | `ui/detail/RecordDetailScreen.kt` | `ui/detail/RecordDetailViewModel.kt` | Détail album |
 | `record/{recordId}/edit` | `ui/edit/AddEditRecordScreen.kt` | idem | Édition album |
@@ -42,7 +42,9 @@
 | `ui/sharing/ShareCodeDialog.kt` | Affichage **unique** du code créé (copier / partager via…) — il n'est jamais réaffiché ; rappelle ce que le code ouvre |
 | `ui/sharing/ShareLabelDialog.kt` | Renommage d'un partage, des deux côtés. Le libellé est privé de chaque côté : aucun ne franchit la frontière |
 | `ui/sharing/received/JoinShareDialog.kt` | Saisie d'un code + libellé privé. Pas de capitalisation automatique : un code base64url est sensible à la casse |
-| `ui/list/SeriesGrid.kt` | Grille des séries (mode manga) |
+| `ui/list/SeriesGrid.kt` | Grille des séries (densité grille, défaut manga) |
+| `ui/list/SeriesList.kt` | Liste des séries (densité liste) — même contenu, même sélection que la grille |
+| `ui/list/CollectionTileBody.kt` | Corps **en tuiles** : grille (une rubrique sans titre) et galerie (rubriques d'écoute). Porte aussi `DisplayModeAction`, la bascule liste/grille/galerie de la barre de recherche |
 | `ui/series/VolumeTile.kt` | Tuile d'un tome dans le détail série |
 | `ui/components/RecordRow.kt` | Ligne d'item dans la liste |
 | `ui/components/RecordCover.kt` | Affichage pochette/couverture |

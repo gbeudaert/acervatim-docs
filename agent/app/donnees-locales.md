@@ -10,7 +10,7 @@ Base : `AcervatimDatabase.kt`. Migrations manuelles : `Migrations.kt`. Convertis
 
 | Entité | DAO | Contenu |
 |---|---|---|
-| `RecordEntity.kt` | `RecordDao.kt` | Item de collection (album vinyle ou tome manga) : métadonnées, statut, rating, dernière écoute, lien série/volume |
+| `RecordEntity.kt` | `RecordDao.kt` | Item de collection (album vinyle ou tome manga) : métadonnées, statut, rating, dernière écoute (`lastPlayedAt`) **et compteur d'écoutes** (`playCount`), lien série/volume |
 | `ArtistEntity.kt` + `RecordArtistCrossRef.kt` | `ArtistDao.kt` | Artistes normalisés, relation N-N avec les records |
 | `SeriesEntity.kt` | `SeriesDao.kt` | Séries manga (titre, wishlist, extras) |
 | `CollectionEntity.kt` | `CollectionDao.kt` | Collections locales (miroir des collections backend / types) |
@@ -18,13 +18,13 @@ Base : `AcervatimDatabase.kt`. Migrations manuelles : `Migrations.kt`. Convertis
 ### Projections & mappers
 
 - `RecordWithArtistsRow.kt` — row record + artistes joints.
-- `SeriesWithCountsRow.kt` — série + compteurs (tomes possédés / total).
+- `SeriesWithCountsRow.kt` — série + compteurs (tomes possédés / total) + agrégats d'écoute des tomes (`MAX(lastPlayedAt)`, `SUM(playCount)`), qui alimentent les rubriques de la galerie.
 - `RecordMapper.kt`, `SeriesMapper.kt` — entity ↔ modèle domaine.
 - `data/repository/LocalCollectionResolver.kt` — résolution de la collection locale cible (par type) lors des écritures.
 
 ## Préférences (`data/local/settings/`)
 
-`DataStoreSettingsRepository.kt` — implémentation `SettingsRepository` sur Jetpack DataStore : type de collection actif, visibilité des types, mode de liste par type, réglage doublons, thème, etc.
+`DataStoreSettingsRepository.kt` — implémentation `SettingsRepository` sur Jetpack DataStore : type de collection actif, visibilité des types, mode de liste **et densité d'affichage** par type (`list_mode_<TYPE>` / `display_mode_<TYPE>`), réglage doublons, thème, etc.
 
 ## Stockage des couvertures (`data/local/storage/`)
 

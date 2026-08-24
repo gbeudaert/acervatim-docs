@@ -40,7 +40,7 @@ ui/  (Compose + ViewModel)  →  domain/ (modèles, interfaces, use cases)  ← 
 
 ## Modèles domaine (`domain/model/`)
 
-Principaux : `Record` (item générique), `Series` / `SeriesWithCounts`, `Artist` / `RecordArtistEntry`, `CollectionType`, `RecordFilter` (filtres liste), `ItemStatus` (owned/wishlist…), `ListMode`, `AcervatimFormat`, `RecordingSpeed` (vinyle), `MangaExtras` / `MangaDemographic` / `EditionMapping` / `Isbn` (manga), `ExternalMatch` (résultat recherche externe).
+Principaux : `Record` (item générique), `Series` / `SeriesWithCounts`, `Artist` / `RecordArtistEntry`, `CollectionType`, `RecordFilter` (filtres liste), `ItemStatus` (owned/wishlist…), `ListMode` (hiérarchie) et `DisplayMode` (densité : liste/grille/galerie, axe orthogonal), `AcervatimFormat`, `RecordingSpeed` (vinyle), `MangaExtras` / `MangaDemographic` / `EditionMapping` / `Isbn` (manga), `ExternalMatch` (résultat recherche externe).
 Sous-dossiers : `model/auth/` (`AuthState`, `SignInCancelledException`), `model/account/` (`AccountModels`), `model/sync/` (`RemoteModels`, `SyncState`, `SyncStatus`).
 
 ## Use cases (`domain/usecase/`) — catalogue par thème
@@ -49,13 +49,13 @@ Sous-dossiers : `model/auth/` (`AuthState`, `SignInCancelledException`), `model/
 `AddRecordUseCase` · `UpdateRecordUseCase` · `DeleteRecordUseCase` · `RecordInput` (modèle d'entrée) · `ObserveRecordByIdUseCase` · `ObserveRecordsUseCase` · `ObserveFilteredRecordsUseCase` (applique `RecordFilter`) · `ObserveCollectionEntriesUseCase`
 
 ### État utilisateur sur un item
-`UpdateRatingUseCase` · `MarkAsPlayedUseCase` · `ResetLastPlayedUseCase` · `ToggleWishlistUseCase` · `UpdateItemStatusUseCase`
+`UpdateRatingUseCase` · `MarkAsPlayedUseCase` (horodate **et** incrémente `playCount`) · `ResetLastPlayedUseCase` (efface les deux) · `ToggleWishlistUseCase` · `UpdateItemStatusUseCase`
 
 ### Séries manga
 `UpsertSeriesUseCase` · `DeleteSeriesUseCase` · `ObserveSeriesByIdUseCase` · `ObserveSeriesItemsUseCase` · `ObserveSeriesWithCountsUseCase` · `ObserveSeriesByCollectionTypeUseCase` · `ImportScannedSeriesUseCase` (import d'une série complète depuis un scan)
 
 ### Types de collection & réglages
-`ObserveActiveCollectionTypeUseCase` · `SetActiveCollectionTypeUseCase` · `CollectionTypeVisibilityUseCases` · `ListModeForCollectionTypeUseCases` · `ObserveDuplicateAlbumsSettingUseCase`
+`ObserveActiveCollectionTypeUseCase` · `SetActiveCollectionTypeUseCase` · `CollectionTypeVisibilityUseCases` · `ListModeForCollectionTypeUseCases` · `DisplayModeForCollectionTypeUseCases` · `ObserveDuplicateAlbumsSettingUseCase`
 
 ### Statistiques & suggestions
 `ObserveCollectionStatsUseCase` · `ObserveCollectionTypeStatsUseCase` · `ObserveDistinctGenresUseCase` · `ObserveArtistSuggestionsUseCase`

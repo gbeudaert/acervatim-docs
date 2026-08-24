@@ -61,7 +61,8 @@
 | RTDN, webhook Google Play | `be:subscriptions/pubsub-verifier.service.ts` + controller |
 | Invitations, codes | `be:invitations/` |
 | Wishlist | `app:domain/usecase/ToggleWishlistUseCase.kt` · `CollectionNode.isWishlist` |
-| Rating, note, dernière écoute | `app:domain/usecase/UpdateRatingUseCase.kt`, `MarkAsPlayedUseCase.kt` |
+| Rating, note, dernière écoute, compteur d'écoutes | `app:domain/usecase/UpdateRatingUseCase.kt`, `MarkAsPlayedUseCase.kt` (incrémente `playCount`) · `userData.playCount` côté serveur |
+| Galerie, grille, densité d'affichage | `app:ui/list/CollectionTileBody.kt` · `app:domain/model/DisplayMode.kt` (axe **orthogonal** à `ListMode`) |
 | Thème, couleurs | `app:ui/theme/` |
 | Settings, préférences, DataStore | `app:data/local/settings/DataStoreSettingsRepository.kt` · `app:ui/settings/` |
 | Variables d'environnement | `be:config/env.validation.ts` |

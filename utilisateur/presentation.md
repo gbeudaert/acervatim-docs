@@ -44,6 +44,16 @@ Le bouton réglages (⛭) à droite de la barre de recherche ouvre le panneau de
 - **Mode d'affichage** (collections qui le permettent, comme le manga) : vue à plat ou vue par séries ;
 - **Réinitialiser** pour revenir à la liste complète.
 
+### Liste, grille ou galerie
+
+L'icône d'affichage, à droite de la barre de recherche, propose trois densités — le choix est mémorisé **par collection** :
+
+- **Liste** : une ligne par élément, vignette et texte ;
+- **Grille** : des jaquettes en tuiles, toute la collection d'un bloc ;
+- **Galerie** : de grandes jaquettes classées par rubriques d'écoute — *Derniers écoutés*, *Les plus écoutés*, *Jamais écoutés ou oubliés*, puis toute la collection. Une rubrique sans élément n'apparaît pas.
+
+Les rubriques d'écoute s'appuient sur le compteur d'écoutes : chaque *Je viens de l'écouter* incrémente un total, en plus de la date de dernière écoute. Le compteur suit votre compte quand la synchronisation est active.
+
 ### Lecture de la liste
 
 - Les entrées sont triées par artiste, avec des en-têtes alphabétiques collants.
@@ -90,7 +100,7 @@ Touchez un élément de la liste pour ouvrir sa fiche :
 - grande jaquette, artiste et titre ;
 - **note** : touchez les étoiles pour la modifier ;
 - chips d'informations : genre, format, année, label, pays, prix ;
-- **dernière écoute** : « Il y a 3 jours », avec un bouton *Je viens de l'écouter* et un bouton *Reset* — pratique pour repérer les disques délaissés ;
+- **dernière écoute** : « Il y a 3 jours » et le nombre d'écoutes, avec un bouton *Je viens de l'écouter* et un bouton *Réinitialiser* (qui efface la date **et** le compteur) — pratique pour repérer les disques délaissés ;
 - **statut** : interrupteur pour basculer entre collection et wishlist ;
 - menu ⋮ : éditer, supprimer, voir sur Discogs (si la fiche en provient).
 
@@ -123,6 +133,8 @@ Un **appui long** sur un tome fait basculer son état :
 - Les doublons sont évités : un même ISBN ou un même couple série + numéro de tome ne peut pas être saisi deux fois.
 
 Si vous préférez voir chaque tome individuellement, basculez en **vue à plat** depuis le panneau de filtres — le choix est mémorisé par collection.
+
+La bascule **liste / grille / galerie** s'applique aussi à la vue par séries : une série y devient une tuile, et les rubriques d'écoute cumulent les écoutes de ses tomes.
 
 ## Import, export et sauvegarde
 

@@ -12,7 +12,7 @@ quand on ajoute, dans sa propre collection quand on la parcourt.
 |---|---|---|
 | 1 | [Recherche textuelle vers les bases externes](#1--recherche-textuelle-vers-les-bases-externes) | ~90 % app (le backend sait déjà le faire) |
 | 2 | [Tris et filtres dans l'app](#2--tris-et-filtres-dans-lapp) | App (backend seulement pour le web) |
-| 3 | [Vue galerie](#3--vue-galerie) | App — la donnée qui manquait côté backend est livrée (SD3) |
+| 3 | [Vue galerie](#3--vue-galerie) | ✅ Livré — serveur (SD3) puis app (AD3), 2026-08-24 |
 
 Elles sont **indépendantes** : ni ordre imposé, ni dépendance croisée. Deux liens utiles seulement :
 l'évolution 3 profite des tris de l'évolution 2, et les deux profitent de la synchronisation
@@ -114,16 +114,18 @@ côté serveur. `MarkAsPlayedUseCase` appelle `updateLastPlayed(id, now)` : un u
 **écrasé** à chaque écoute. On sait *quand* un disque a été écouté pour la dernière fois, jamais
 *combien de fois*.
 
-Le serveur sait désormais le stocker (`userData.playCount`, sprint SD3, 2026-08-24) ; **l'app ne
-compte toujours rien** — c'est AD3 qui doit incrémenter et pousser.
+Le serveur sait le stocker depuis le sprint SD3 (`userData.playCount`) et **l'app compte depuis
+AD3** (2026-08-24) : `Record.playCount` en base (migration Room v6 → v7, l'existant repart de 0),
+incrémenté par `MarkAsPlayedUseCase` dans la même écriture que `lastPlayedAt`, poussé en valeur
+absolue dans `userData.playCount`. Le blocage est levé.
 
 État des rubriques :
 
-| Rubrique voulue | Faisable aujourd'hui ? |
+| Rubrique voulue | État |
 |---|---|
-| Les X derniers écoutés | ✅ Oui — tri sur `lastPlayedAt` |
-| Les plus écoutés | 🔸 Côté serveur oui (`userData.playCount`, SD3) — **l'app ne compte toujours pas** |
-| Jamais écoutés / pas depuis 6 mois | ✅ Oui (filtre déjà présent) |
+| Les X derniers écoutés | ✅ Livré — tri sur `lastPlayedAt`, borné à 12 |
+| Les plus écoutés | ✅ Livré — `playCount` des deux côtés (local + `userData`) |
+| Jamais écoutés / pas depuis 6 mois | ✅ Livré — une seule rubrique « oubliés » |
 
 Deux options étaient ouvertes :
 
@@ -136,31 +138,34 @@ Deux options étaient ouvertes :
 
 **Tranché le 2026-08-24 : compteur simple**, l'historique reste ouvert si des rubriques temporelles
 deviennent nécessaires — ce serait alors une décision produit **et** privacy, pas un simple ajout
-technique. Le volet serveur est livré (sprint SD3) : `userData.playCount`, entier ≥ 0, absent ⇒ 0,
-projeté en liste. Reste le volet app (AD3) : le compteur doit exister des deux côtés (local +
-`userData.playCount`) pour survivre à un changement d'appareil — sinon il repart de zéro à chaque
-réinstallation, ce qui vide la rubrique de son sens.
+technique. Les deux volets sont livrés : serveur (SD3) `userData.playCount`, entier ≥ 0, absent ⇒ 0,
+projeté en liste ; app (AD3) compteur local **et** push, pour que le compteur survive à un
+changement d'appareil — sinon il repartirait de zéro à chaque réinstallation, ce qui viderait la
+rubrique de son sens.
 
 Limite assumée du modèle : le PATCH `userData` est un merge de valeurs, pas un incrément. L'app
 envoie une valeur absolue, donc deux appareils qui écoutent hors ligne puis synchronisent
 s'écrasent mutuellement (dernier écrivain gagne) au lieu de s'additionner.
 
-### L'axe d'affichage n'existe pas encore
+### L'axe d'affichage : `DisplayMode`
 
 `ListMode` (`FLAT` / `SERIAL`) décrit la **hiérarchie** (liste plate vs liste de séries), pas la
-densité visuelle. La galerie est donc un **axe orthogonal** à introduire (mode d'affichage :
-liste / grille / galerie), pas une troisième valeur de `ListMode`. Confondre les deux enfermerait
-la galerie dans un seul type de collection.
+densité visuelle. La galerie est donc un **axe orthogonal**, introduit par AD3 :
+`DisplayMode` (`LIST` / `GRID` / `GALLERY`), persisté **par type de collection** comme `ListMode`,
+et non une troisième valeur de `ListMode` — qui aurait enfermé la galerie dans un seul type de
+collection. Défaut par type : grille pour une collection de séries (ce que la vue manga a toujours
+fait), liste pour une collection plate.
 
-Une brique existe déjà : `SeriesGrid.kt` (grille de tomes de l'écran détail série) — à regarder
-avant d'en écrire une autre.
+La brique existante `SeriesGrid.kt` reste la vue grille des séries ; les tuiles disques et séries
+partagent `ui/list/CollectionTileBody.kt`, donc un seul rendu pour la grille et la galerie.
 
 ### Images
 
 Les jaquettes viennent de deux sources : `coverPath` (fichier local) et `coverRemoteUrl`
-(provider). Une galerie affiche de **grandes** images, en nombre : le dimensionnement, le cache et
-le préchargement deviennent des sujets de performance, alors qu'ils sont indolores sur une liste à
-vignettes.
+(provider). `RecordCover` gère les deux avec repli et pose un placeholder, et Coil charge à la
+taille du composable — une tuile sans jaquette ne troue pas la grille, et rien n'est décodé en
+pleine résolution. Le préchargement n'est pas implémenté : le défilement sur une **grosse**
+collection reste à mesurer sur appareil, il n'est pas prouvé ici.
 
 ---
 
@@ -168,7 +173,7 @@ vignettes.
 
 - **Genre mono vs pluriel** (évolution 2) : traiter la dette ou l'assumer ?
 - ~~**Compteur vs historique d'écoutes** (évolution 3)~~ : tranché le 2026-08-24 — **compteur**
-  (`userData.playCount`), livré côté serveur par SD3. L'historique reste écarté, pas oublié.
+  (`userData.playCount`), livré serveur (SD3) et app (AD3). L'historique reste écarté, pas oublié.
 - **Tri serveur** : différé au chantier web, mais le curseur composite est à concevoir à ce
   moment-là, pas à bricoler.
 
