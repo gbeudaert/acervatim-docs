@@ -12,7 +12,7 @@ quand on ajoute, dans sa propre collection quand on la parcourt.
 |---|---|---|
 | 1 | [Recherche textuelle vers les bases externes](#1--recherche-textuelle-vers-les-bases-externes) | ~90 % app (le backend sait déjà le faire) |
 | 2 | [Tris et filtres dans l'app](#2--tris-et-filtres-dans-lapp) | App (backend seulement pour le web) |
-| 3 | [Vue galerie](#3--vue-galerie) | App + **une donnée manquante côté backend** |
+| 3 | [Vue galerie](#3--vue-galerie) | App — la donnée qui manquait côté backend est livrée (SD3) |
 
 Elles sont **indépendantes** : ni ordre imposé, ni dépendance croisée. Deux liens utiles seulement :
 l'évolution 3 profite des tris de l'évolution 2, et les deux profitent de la synchronisation
@@ -107,21 +107,25 @@ au moment du web, pas avant. Le sprint backend correspondant est écrit mais exp
 Une vue inspirée de *Photos* : grandes images, mise en avant des **derniers écoutés** et des **plus
 écoutés**. La vue séries manga doit suivre la même logique.
 
-### Le blocage : « les plus écoutés » est impossible aujourd'hui
+### Le blocage : « les plus écoutés » n'avait aucune donnée
 
-Il n'existe **aucun compteur d'écoutes** dans le projet. `MarkAsPlayedUseCase` appelle
-`updateLastPlayed(id, now)` : un unique horodatage, **écrasé** à chaque écoute. On sait *quand* un
-disque a été écouté pour la dernière fois, jamais *combien de fois*.
+À l'audit du 2026-08-20, il n'existait **aucun compteur d'écoutes** dans le projet, ni côté app ni
+côté serveur. `MarkAsPlayedUseCase` appelle `updateLastPlayed(id, now)` : un unique horodatage,
+**écrasé** à chaque écoute. On sait *quand* un disque a été écouté pour la dernière fois, jamais
+*combien de fois*.
 
-Conséquence, à trancher avant de dessiner l'écran :
+Le serveur sait désormais le stocker (`userData.playCount`, sprint SD3, 2026-08-24) ; **l'app ne
+compte toujours rien** — c'est AD3 qui doit incrémenter et pousser.
+
+État des rubriques :
 
 | Rubrique voulue | Faisable aujourd'hui ? |
 |---|---|
 | Les X derniers écoutés | ✅ Oui — tri sur `lastPlayedAt` |
-| Les plus écoutés | ❌ **Non** — donnée inexistante |
+| Les plus écoutés | 🔸 Côté serveur oui (`userData.playCount`, SD3) — **l'app ne compte toujours pas** |
 | Jamais écoutés / pas depuis 6 mois | ✅ Oui (filtre déjà présent) |
 
-Deux options pour débloquer, à arbitrer :
+Deux options étaient ouvertes :
 
 - **Compteur simple** (`playCount`) — peu coûteux, répond à « les plus écoutés », mais ne saura
   jamais dire « les plus écoutés **ce mois-ci** ».
@@ -130,10 +134,16 @@ Deux options pour débloquer, à arbitrer :
   un sujet de vie privée (un historique d'écoute est une donnée de comportement, plus sensible
   qu'un compteur).
 
-Recommandation : **compteur simple** pour cette itération, en notant que l'historique reste ouvert.
-Le compteur doit exister des deux côtés (local + `userData.playCount`) pour survivre à un
-changement d'appareil — sinon il repart de zéro à chaque réinstallation, ce qui vide la rubrique de
-son sens.
+**Tranché le 2026-08-24 : compteur simple**, l'historique reste ouvert si des rubriques temporelles
+deviennent nécessaires — ce serait alors une décision produit **et** privacy, pas un simple ajout
+technique. Le volet serveur est livré (sprint SD3) : `userData.playCount`, entier ≥ 0, absent ⇒ 0,
+projeté en liste. Reste le volet app (AD3) : le compteur doit exister des deux côtés (local +
+`userData.playCount`) pour survivre à un changement d'appareil — sinon il repart de zéro à chaque
+réinstallation, ce qui vide la rubrique de son sens.
+
+Limite assumée du modèle : le PATCH `userData` est un merge de valeurs, pas un incrément. L'app
+envoie une valeur absolue, donc deux appareils qui écoutent hors ligne puis synchronisent
+s'écrasent mutuellement (dernier écrivain gagne) au lieu de s'additionner.
 
 ### L'axe d'affichage n'existe pas encore
 
@@ -157,7 +167,8 @@ vignettes.
 ## Points ouverts (transverses)
 
 - **Genre mono vs pluriel** (évolution 2) : traiter la dette ou l'assumer ?
-- **Compteur vs historique d'écoutes** (évolution 3) : recommandation = compteur, à confirmer.
+- ~~**Compteur vs historique d'écoutes** (évolution 3)~~ : tranché le 2026-08-24 — **compteur**
+  (`userData.playCount`), livré côté serveur par SD3. L'historique reste écarté, pas oublié.
 - **Tri serveur** : différé au chantier web, mais le curseur composite est à concevoir à ce
   moment-là, pas à bricoler.
 

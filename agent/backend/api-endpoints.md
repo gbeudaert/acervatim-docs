@@ -78,11 +78,11 @@ décrirait le nœud. La dédup par `source` (idempotence des imports provider) e
 | Route | Controller | Notes |
 |---|---|---|
 | `POST /v1/collections/:collectionId/items` | `items/items.controller.ts` | Validation `unifiedData` par le profil du type ; plafond technique vérifié. Série parente par `node` (réf. provider, upsert) **ou** `nodeId` (série déjà créée) — exclusifs |
-| `GET /v1/collections/:collectionId/items` | idem | Projection légère dépendante du type ; filtres `provider[in]`, `nodeId`. Toutes les projections exposent `status` (statut de possession résolu, `OWNED` par défaut) |
+| `GET /v1/collections/:collectionId/items` | idem | Projection légère dépendante du type ; filtres `provider[in]`, `nodeId`. Toutes les projections exposent `status` (statut de possession résolu, `OWNED` par défaut) et `playCount` (compteur d'écoutes résolu, `0` par défaut) — la galerie trie dessus sans re-fetch. N'y projeter que des champs de la liste blanche de partage : la liste sert aussi les membres |
 | `GET /v1/items/:id` | idem | |
 | `GET /v1/items/:id/sources` | idem | |
 | `POST /v1/items/:id/sources` | idem | Attacher une source (ex. ISBN/BnF) |
-| `PATCH /v1/items/:id` | idem | `unifiedData` (remplacé en bloc) / `userData` (mergé) — schéma `dto/item-user-data.schema.ts`, dont `status: OWNED\|WISHLIST\|IGNORED\|null` — plus `nodeId`/`volume` (identité structurelle du tome, `null` accepté) |
+| `PATCH /v1/items/:id` | idem | `unifiedData` (remplacé en bloc) / `userData` (mergé) — schéma `dto/item-user-data.schema.ts`, dont `status: OWNED\|WISHLIST\|IGNORED\|null` et `playCount` (entier ≥ 0, absent ⇒ 0, valeur **absolue** : pas d'incrément côté API) — plus `nodeId`/`volume` (identité structurelle du tome, `null` accepté) |
 | `DELETE /v1/items/:id` | idem | |
 
 **Tome et série (types hiérarchiques).** Rien n'est exigé : ni série, ni numéro de tome. Supprimer
@@ -206,7 +206,7 @@ Cron de réconciliation : `subscriptions/subscriptions.cron.ts`. Statuts : `subs
   `ownedCount` d'un nœud, et l'`itemCount` par collection de `GET /v1/shares/received`. La colonne dénormalisée
   compterait la collection entière et afficherait « 240 éléments » sur une vue qui en montre 12.
 - **`userData` réduit** à une liste blanche pour un membre : passent `status`, `rating`,
-  `lastPlayedAt` (item) et `note` (nœud, appréciation 0-10) ; ne passent ni le texte libre
+  `lastPlayedAt`, `playCount` (item) et `note` (nœud, appréciation 0-10) ; ne passent ni le texte libre
   (`note` d'item, `comment` de nœud) ni le financier (`purchasePrice`). Liste blanche et non noire :
   un champ ajouté plus tard reste invisible tant qu'il n'a pas été jugé partageable.
 - `sources[]` (y compris `rawData`) sortent tels quels : ce sont des fiches de catalogue public

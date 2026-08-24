@@ -267,7 +267,8 @@ requête par entrée sur une liste de partages non plafonnée.
 
 **`userData` du propriétaire** : réduit à une **liste blanche** pour un membre
 (`sharing/shared-user-data.ts`). Passent l'appréciation et le fait de collection — `status`
-(indispensable au filtrage), `rating`, `lastPlayedAt` pour un item, `note` (0-10) pour un nœud. Ne
+(indispensable au filtrage), `rating`, `lastPlayedAt`, `playCount` pour un item, `note` (0-10) pour
+un nœud. Ne
 passent ni le texte libre (`note` d'item, `comment` de nœud, qui peuvent contenir n'importe quoi de
 personnel) ni le financier (`purchasePrice`). Liste blanche et non liste noire : les champs que
 S1bis fera remonter resteront invisibles tant qu'ils n'auront pas été jugés partageables, si bien

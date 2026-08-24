@@ -34,6 +34,7 @@ Légende : ✅ synchronisé · ⚠️ synchronisé avec une réserve · ❌ volo
 | `purchasePrice` | `userData.purchasePrice` | ✅ |
 | `lastPlayedAt` | `userData.lastPlayedAt` (ISO-8601) | ✅ |
 | `status: ItemStatus` | `userData.status` | ✅ depuis S1 ; absent ⇒ `OWNED` |
+| — | `userData.playCount` (entier ≥ 0) | 🔸 existe côté serveur depuis SD3, **l'app n'a aucun compteur d'écoutes** (`MarkAsPlayedUseCase` n'écrit que `lastPlayedAt`). Le canal est ouvert, c'est AD3 qui le remplit ; valeur **absolue**, jamais un incrément |
 | `barcode` | `sources[]` `provider: 'barcode'` | ✅ **seule** source de vérité depuis S1bis |
 | `isbn` | `sources[]` `provider: 'isbn'` | ✅ |
 | `discogsId` | `sources[]` `provider: 'discogs'` | ✅ |
