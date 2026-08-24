@@ -96,6 +96,10 @@ podman build --target migrate -t acervatim-migrate .
 podman run --rm --env-file ~/acervatim/.env acervatim-migrate
 ```
 
+> La procédure complète de montée de version d'un service **déjà en place** (ordre des opérations,
+> sauvegarde, bascule de tag, retour arrière) est décrite dans
+> [Mise à jour du backend](mise-a-jour.md).
+
 ## Redis (files BullMQ)
 
 Redis héberge les files **BullMQ** qui régulent les appels aux sources externes (throttle global +
@@ -137,4 +141,6 @@ Dépôt `acervatim-backend`, dossier `deploy/` (unités Quadlet commentées pas 
 
 ## Voir aussi
 
+- [Mise à jour du backend](mise-a-jour.md) — montée de version d'un service déjà installé : images,
+  migrations Prisma, bascule et retour arrière.
 - [Architecture § Déploiement](architecture.md#déploiement).

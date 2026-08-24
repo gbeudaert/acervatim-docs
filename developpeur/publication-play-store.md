@@ -2,7 +2,7 @@
 title: Publication Play Store
 layout: default
 parent: Développeur
-nav_order: 6
+nav_order: 7
 ---
 
 # Publication Play Store

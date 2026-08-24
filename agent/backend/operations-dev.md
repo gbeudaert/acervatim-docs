@@ -1,6 +1,6 @@
 # acervatim-backend — Opérations & développement
 
-> Remonter : [INDEX.md](INDEX.md) · Référence complète : `acervatim-backend/CLAUDE.md` (§ Commandes, § Workflow Prisma)
+> Remonter : [INDEX.md](INDEX.md) · Règles dures : `acervatim-backend/AGENTS.md` (§ Running and verifying)
 
 ## Règle dure : le wrapper `scripts/dev.ps1`
 
@@ -28,12 +28,43 @@ URLs dev : app `http://localhost:3000` · Adminer `http://localhost:8080`.
 ## Tests
 
 - Unit : `*.spec.ts` co-localisés → `./scripts/dev.ps1 npm test` (ou passe-plat équivalent).
-- E2E : `*.e2e.spec.ts` (auth, invitations, items, users).
+- E2E : `*.e2e.spec.ts` (auth, invitations, items, users, sharing).
+
+> **Les e2e exigent `NODE_ENV=test`.** Le throttler global (100 req/min/IP) porte
+> `skipIf: () => process.env.NODE_ENV === 'test'` ; le conteneur de dev, lui, tourne en
+> `NODE_ENV=development`. Lancer jest dedans sans surcharger la variable fait échouer les e2e en
+> **429 dès le `login()`** — un échec qui ressemble à une régression fonctionnelle et n'en est pas :
+>
+> ```
+> docker compose exec -T -e NODE_ENV=test app npx jest src/sharing --runInBand
+> ```
+
+## Piège : le conteneur de dev ne recharge pas toujours le code
+
+`docker-compose.yml` monte le source en bind (`.:/app`) et lance `npm run start:dev` (watch Nest).
+Sur Docker Desktop / Windows, les événements inotify **ne traversent pas le montage** de façon
+fiable : le process peut servir un build vieux de plusieurs heures alors que le source sur disque est
+à jour. Symptôme typique — un client qui appelle une route qu'on vient d'ajouter reçoit un `404`
+« Cannot POST /v1/… » alors que le controller existe.
+
+Diagnostic en une commande, sans lire les logs :
+
+```
+curl -s http://localhost:3000/docs-json | jq -r '.paths | keys[]'
+```
+
+Si la route manquante n'y est pas, c'est le process, pas le code : `docker compose restart app`
+(≈50 s avant que `/health` réponde). Les migrations, elles, sont indépendantes — vérifier séparément
+avec `docker compose exec -T app npx prisma migrate status`.
 
 ## Déploiement
 
 - Cible : conteneur **Podman** (unité Quadlet systemd) derrière un reverse proxy TLS ; MariaDB hébergée séparément (pas de conteneur DB en prod).
 - Matériel de déploiement : `acervatim-backend/deploy/` ; doc humaine : [../../developpeur/deploiement.md](../../developpeur/deploiement.md).
+- Montée de version d'un service déjà en place (deux images `--target runtime` / `--target migrate`,
+  ordre des opérations, retour arrière) : [../../developpeur/mise-a-jour.md](../../developpeur/mise-a-jour.md).
+  Les images se construisent hors de l'hôte (`--platform linux/arm64`) et se transfèrent en `.tar` ;
+  les migrations ne sont **jamais** jouées par le conteneur d'API (CLI `prisma` = devDep).
 - DB scripts : `acervatim-backend/db/` ; builds : `dist/`.
 
 ## Jobs planifiés (cron applicatifs NestJS)
