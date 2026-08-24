@@ -15,10 +15,13 @@
 | Toucher à la logique métier app | `app:domain/usecase/*UseCase.kt` | [app/architecture.md](../app/architecture.md) |
 | Ajouter un type de collection | recette complète | [backend/modules.md](../backend/modules.md) § recette |
 | Ajouter une source externe / un adapter | `be:oauth/providers/*.adapter.ts` + `be:common/sources/` | [transverse/sources-externes.md](sources-externes.md) |
+| Toucher au repli quand la BnF ignore l'ISBN | `be:oauth/providers/mal.adapter.ts` (`googleBooksPivot`) + `be:common/sources/title-ladder.ts` | [transverse/sources-externes.md](sources-externes.md) § repli Google Books |
 | Comprendre un flux complet (scan, sync, premium…) | — | [transverse/flux-metier.md](flux-metier.md) |
+| Comprendre le découpage en services / la cible micro-services | — | [backend/architecture-microservices.md](../backend/architecture-microservices.md) (**cible non engagée** : rien de tout cela n'est implémenté) |
 | Toucher auth / JWT / identité | `be:auth/`, `be:common/guards/jwt-auth.guard.ts` ; `app:data/remote/auth/` | [backend/securite-et-privacy.md](../backend/securite-et-privacy.md) |
 | Lancer le backend / une migration / les tests | `acervatim-backend/scripts/dev.ps1` | [backend/operations-dev.md](../backend/operations-dev.md) |
 | Builder/tester l'app | `.\gradlew.bat assembleDebug / test / lint` | [conventions.md](../conventions.md) |
+| Changer l'identité d'une variante app (package, nom, icône, URL backend) | `acervatim-app/app/build.gradle.kts` (buildTypes) + `app/src/debug/` | [developpeur/build-app-locale.md](../../developpeur/build-app-locale.md) |
 | Mettre à jour la doc publique (humains) | dépôt `acervatim-docs/` (page concernée) | [conventions.md](../conventions.md) § où documenter |
 
 ## Par mot-clé
@@ -37,7 +40,7 @@
 | Throttle appels sortants (limiters BullMQ) | `be:src/oauth/providers/*.processor.ts` · `be:src/common/sources/googlebooks/googlebooks.processor.ts` (cf. [scan-asynchrone-bullmq.md](../backend/scan-asynchrone-bullmq.md)) |
 | Cache API externe | `be:common/cache/api-cache.service.ts` |
 | Audit log | `be:common/audit/audit-log.service.ts` |
-| unifiedData, sources, userData | `be:collections/types/` (schémas) · `be:items/dto/item-user-data.schema.ts` · `be:nodes/dto/node-user-data.schema.ts` · [backend/modele-de-donnees.md](../backend/modele-de-donnees.md) |
+| unifiedData, sources, userData | `be:collections/types/` (schémas) · `be:items/dto/item-user-data.schema.ts` · `be:nodes/dto/node-user-data.schema.ts` · `be:common/validation/bounded-json.ts` (plafond de taille partagé) · [backend/modele-de-donnees.md](../backend/modele-de-donnees.md) |
 | « le serveur connaît-il ce champ ? » | [backend/contrat-app-serveur.md](../backend/contrat-app-serveur.md) (tableau app ↔ serveur, item et nœud) |
 | Profil vinyl / manga | `be:collections/types/vinyl.ts` / `manga.ts` / `registry.ts` |
 | Série, node, hiérarchie | `be:nodes/` · `app:ui/series/` · `app:domain/model/Series.kt` |
@@ -62,5 +65,6 @@
 | Variables d'environnement | `be:config/env.validation.ts` |
 | Seed, types de collection en base | `acervatim-backend/prisma/seed.ts` |
 | Déploiement backend | `acervatim-backend/deploy/` · `acervatim-docs/developpeur/deploiement.md` |
+| Monter le backend de version (images, migrations, rollback) | `acervatim-docs/developpeur/mise-a-jour.md` |
 | Cron, jobs planifiés | `be:subscriptions/subscriptions.cron.ts` |
 | requestId, corrélation | `be:common/interceptors/correlation-id.interceptor.ts` |

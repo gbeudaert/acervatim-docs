@@ -61,8 +61,8 @@ INDEX.md (toi ici)
 
 | Doc | Rôle | Emplacement |
 |---|---|---|
-| `CLAUDE.md` (app) | Règles de code Android (chargé auto en session) | `acervatim-app/CLAUDE.md` |
-| `CLAUDE.md` (backend) | Règles dures backend (chargé auto en session) | `acervatim-backend/CLAUDE.md` |
+| `AGENTS.md` (app) | Règles dures Android (chargé auto en session ; `CLAUDE.md` n'est qu'un pointeur) | `acervatim-app/AGENTS.md` |
+| `AGENTS.md` (backend) | Règles dures backend (chargé auto en session ; `CLAUDE.md` n'est qu'un pointeur) | `acervatim-backend/AGENTS.md` |
 | Site public | Doc humaine (utilisateur / développeur / légal) | racine de ce dépôt : [`../utilisateur/`](../utilisateur/) · [`../developpeur/`](../developpeur/) · [`../legal/`](../legal/) |
 
 ## Maintenance de cette doc

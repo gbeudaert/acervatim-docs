@@ -1,6 +1,6 @@
 # acervatim-backend — Carte du dépôt NestJS
 
-> Remonter : [../INDEX.md](../INDEX.md) · Règles dures : `acervatim-backend/CLAUDE.md`
+> Remonter : [../INDEX.md](../INDEX.md) · Règles dures : `acervatim-backend/AGENTS.md`
 
 ## Identité
 
@@ -24,7 +24,9 @@ src/
 ├── premium/        — PremiumGuard + résolution du statut premium
 ├── subscriptions/  — Google Play : verify, webhook RTDN, cron de réconciliation
 ├── invitations/    — codes d'invitation anonymes (admin + redeem)
-├── sharing/        — partage d'une collection : CollectionShare + codes hors-bande (S3)
+├── sharing/        — partage de collections : CollectionShare + codes hors-bande (S3),
+│                   filtrage par statuts et masquage du userData partage (S4),
+│                   N collections par code + libelles des deux cotes (S5)
 ├── prisma/         — PrismaService/module
 ├── config/         — validation des variables d'env
 └── common/         — audit, cache, crypto, decorators, filters, guards, http,
@@ -36,6 +38,7 @@ src/
 | Fiche | Contenu |
 |---|---|
 | [api-endpoints.md](api-endpoints.md) | Toutes les routes HTTP → controller/service/guards |
+| [contrats-api-v1.md](contrats-api-v1.md) | **Contrats API V1** : versioning, Zod/nestjs-zod, erreurs RFC 9457, pagination cursor, filtres `[in]`/`[all]`, OpenAPI. À lire avant d'écrire un controller ou un DTO |
 | [modele-de-donnees.md](modele-de-donnees.md) | Tables Prisma, relations, invariants |
 | [modules.md](modules.md) | Détail de chaque module feature et de `common/` |
 | [contrat-app-serveur.md](contrat-app-serveur.md) | **Tableau de correspondance champ app ↔ champ serveur** (item et nœud), avec la raison de chaque champ non synchronisé. À mettre à jour dès qu'un champ bouge d'un côté ou de l'autre |
@@ -43,7 +46,8 @@ src/
 | [operations-dev.md](operations-dev.md) | Wrapper dev.ps1, workflow Prisma, tests, déploiement |
 | [scan-asynchrone-bullmq.md](scan-asynchrone-bullmq.md) | **Chantier en cours** : passerelle sources BullMQ+Redis (throttle global, single-flight). P0 gbooks implémenté (branche `feat/p0-bullmq-gbooks`) ; état + suite |
 | [pivot-vs-pipeline-enrichissement.md](pivot-vs-pipeline-enrichissement.md) | **Réflexion non tranchée** : *Kingdom* introuvable côté jaquettes MangaDex (matching trop strict) + Sakamoto Days/Hellsing introuvables (BnF pas encore à jour, aucun repli) → limites structurelles du pivot ; pistes de correction |
-| [partage-de-collection.md](partage-de-collection.md) | Partage d'une collection entre membres (tout/possédés/wantlist), lecture seule, Premium côté propriétaire. **Modèle + CRUD livrés (S3)** ; il reste la **lecture filtrée par portée** (S4) — sans elle, un membre rejoint mais ne voit rien |
+| [partage-de-collection.md](partage-de-collection.md) | Partage de collections entre membres : un code porte N collections, chacune restreinte aux statuts choisis (`OWNED`/`WISHLIST`/`IGNORED`), lecture seule, Premium côté propriétaire, libellé privé de chaque côté. **Chantier backend terminé** (S3, S4, S5). Côté app : A3 est à refaire (rupture d'API S5), puis A4 |
+| [architecture-microservices.md](architecture-microservices.md) | **Cible non engagée** : découpage en micro-services — un service par type de collection + `sharing` + transverses, derrière un gateway qui préserve `/v1/*`. Frontières, coutures dures (couplage `sharing`↔`collections/items/nodes`, routage `collectionId → typeCode`, cascade RGPD), phasage M0→M6. Rien d'implémenté |
 
 ## Concepts clés (à connaître avant de toucher au code)
 
