@@ -28,8 +28,8 @@ Légende : ✅ synchronisé · ⚠️ synchronisé avec une réserve · ❌ volo
 | `recordingSpeed` | `unifiedData.recordingSpeed` (enum `RPM_*`) | ✅ |
 | `country` | `unifiedData.country` | ✅ |
 | `coverRemoteUrl` | `unifiedData.coverUrl` | ✅ |
-| `volumeNumber` | `Item.volume` (colonne) | ✅ |
-| `seriesId` | `Item.nodeId` (FK) | ✅ |
+| `volumeNumber` | `Item.volume` (colonne) | ✅ `null` accepté (hors-série) ; modifiable au `PATCH` |
+| `seriesId` | `Item.nodeId` (FK) | ✅ posé à la création (`nodeId`) **et** modifiable au `PATCH` (`null` = tome orphelin) |
 | `rating: Int?` | `userData.rating` (1–5) | ✅ l'app reborne à 1..5 avant push (le schéma rejette 0) |
 | `purchasePrice` | `userData.purchasePrice` | ✅ |
 | `lastPlayedAt` | `userData.lastPlayedAt` (ISO-8601) | ✅ |
@@ -62,6 +62,27 @@ Légende : ✅ synchronisé · ⚠️ synchronisé avec une réserve · ❌ volo
 | — | `unifiedData.demographic` | 🔸 l'app le stocke dans les extras du **tome** (voir tableau item) |
 | — | `userData.note` / `userData.comment` | 🔸 `NodeUserDataDto` existe côté app, mais `Series` ne porte ni note ni commentaire : le canal est ouvert et inutilisé |
 | — | `isWishlist` | 🔸 `RemoteNode.isWishlist` existe ; `seriesToRemote()` ne le renseigne pas (toujours `false` au push) |
+
+## Ce qui débloque la synchronisation manga
+
+Le tableau ci-dessus était complet **et** inapplicable : côté serveur, créer une série exigeait une
+`source` provider dotée d'un adapter (MAL). Une série saisie à la main dans l'app n'a pas cette
+référence — et `mangadex`/`bnf`, les sources réelles du pivot manga, n'ont pas d'adapter non plus.
+Le mapping existait donc des deux côtés sans qu'aucun manga puisse transiter.
+
+Trois assouplissements côté serveur, tous sans migration :
+
+1. `POST /collections/:id/nodes` accepte un `unifiedData` client (re-validé par le `nodeSchema` du
+   niveau), avec ou sans `source`. C'est exactement ce que produit `FacadeMapper.seriesToRemote()`.
+2. `POST /collections/:id/items` accepte `nodeId` — la série déjà poussée — en alternative à la
+   référence provider `node`. La synchro pousse donc **collections → nœuds → items**.
+3. Sur un type hiérarchique, ni la série ni le numéro de tome ne sont exigés, et le `PATCH` d'un
+   item peut les changer. Sans ça, un tome orphelin ou un hors-série serait rejeté, et un
+   changement de série resterait local : le miroir dériverait en silence.
+
+Reste **entièrement côté app** : lever le filtre `VINYL` de `SyncManagerImpl`, pousser les séries
+avant les tomes, et mémoriser le `remoteId` du nœud. Cf.
+[../app/reseau-sync-compte.md](../app/reseau-sync-compte.md).
 
 ## Décisions prises en S1bis
 

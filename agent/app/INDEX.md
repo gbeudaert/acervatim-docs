@@ -1,6 +1,6 @@
 # acervatim-app — Carte du dépôt Android
 
-> Remonter : [../INDEX.md](../INDEX.md) · Règles de code : `acervatim-app/CLAUDE.md`
+> Remonter : [../INDEX.md](../INDEX.md) · Règles dures : `acervatim-app/AGENTS.md`
 
 ## Identité
 

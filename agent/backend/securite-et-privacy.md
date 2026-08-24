@@ -1,6 +1,6 @@
 # acervatim-backend — Sécurité & privacy
 
-> Remonter : [INDEX.md](INDEX.md) · Règles complètes : `acervatim-backend/CLAUDE.md` (§ Privacy by design, § Secrets)
+> Remonter : [INDEX.md](INDEX.md) · Règles complètes : `acervatim-backend/AGENTS.md` (§ Policy)
 
 ## Chaîne d'authentification
 
@@ -19,6 +19,8 @@ Exceptions au JWT : `POST /v1/auth/google` (public), `GET /health`, `POST /webho
 - Tout nouveau champ `users` ⇒ check de réidentification avant merge.
 - Codes d'invitation : seul le HMAC est stocké (`INVITE_CODE_PEPPER`), le code en clair n'est retourné qu'à la création.
 - Codes de partage de collection : même patron, pepper **dédié** `SHARE_CODE_PEPPER` (émis par n'importe quel utilisateur, donc surface et rotation différentes). Tout refus de redeem sort en un seul `404` `/probs/share-code-invalid` — distinguer « inconnu » de « révoqué » donnerait un oracle d'existence.
+- **Libellés de partage** (`collection_shares.label`, `collection_share_members.label`, S5) : premier champ dont l'*objet* est de nommer quelqu'un (« Wantlist manga avec Alice »). L'invariant tient — c'est du contenu utilisateur, pas un identifiant, et il ne réidentifie personne côté serveur, au même titre que `Collection.name` ou une note d'item. Garde-fous appliqués et testés : jamais journalisé, jamais en métadonnée d'audit (`share.create` porte `{ collections: n }`), **jamais transmis à l'autre partie** (le propriétaire ne voit pas le libellé du membre, et réciproquement), présent dans l'export RGPD de son seul auteur.
+- Membres d'un partage : exposés au propriétaire par `memberUserId` **opaque** uniquement — il n'existe ni nom ni email à exposer, et il ne doit pas en exister.
 
 ## Chiffrement
 

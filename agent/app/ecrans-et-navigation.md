@@ -26,16 +26,22 @@
 | `settings` | `ui/settings/SettingsScreen.kt` | `ui/settings/SettingsViewModel.kt` | Réglages (thème, doublons, backup export/import…) |
 | `settings/collection-types` | `ui/settings/ManageCollectionTypesScreen.kt` | `ui/settings/ManageCollectionTypesViewModel.kt` | Visibilité/gestion des types de collection |
 | `account` | `ui/account/AccountScreen.kt` | `ui/account/AccountViewModel.kt` | Compte Google, sync, premium, invitations, suppression |
-| `sharing/{collectionType}` | `ui/sharing/SharingScreen.kt` | `ui/sharing/SharingViewModel.kt` | Partages émis d'une collection : créer un code, voir les membres, révoquer (propriétaire premium) |
+| `sharing` | `ui/sharing/SharingScreen.kt` | `ui/sharing/SharingViewModel.kt` | Partages **émis** : créer un code (N collections × statuts), nommer, voir les membres, révoquer (propriétaire premium). Sans argument : un partage n'appartient plus à une collection |
+| `shares/received` | `ui/sharing/received/ReceivedSharesScreen.kt` | `ui/sharing/received/ReceivedSharesViewModel.kt` | Partages **reçus** : rejoindre par code, nommer pour soi. Ouvert à **tous** les comptes, premium ou non |
+| `shared/collection/{collectionId}` | `ui/sharing/received/SharedCollectionScreen.kt` | `ui/sharing/received/SharedCollectionViewModel.kt` | Consultation d'une collection partagée : **lecture seule, en ligne**, bandeau de portée permanent, pagination cursor |
+| `shared/series/{collectionId}/{seriesId}` | `ui/sharing/received/SharedSeriesDetailScreen.kt` | `ui/sharing/received/SharedSeriesDetailViewModel.kt` | Détail d'une série partagée. Corps commun (`ui/series/SeriesDetailBody.kt`) ; chargement ciblé du nœud + ses seuls tomes, aucune action |
+| `shared/item/{itemId}` | `ui/sharing/received/SharedItemDetailScreen.kt` | `ui/sharing/received/SharedItemDetailViewModel.kt` | Détail d'un élément partagé. Aucune action : elles ne sont pas désactivées, elles ne sont pas construites |
 
 ## Composants réutilisables & UI annexe
 
 | Fichier | Rôle |
 |---|---|
-| `ui/list/CollectionDrawer.kt` | Drawer de sélection du type de collection actif + stats ; porte l'entrée « Partager cette collection », affichée aux seuls comptes premium |
+| `ui/list/CollectionDrawer.kt` | Drawer de sélection du type de collection actif + stats ; porte « Mes partages » (comptes premium seulement) et « Partagé avec moi » (**tous** les comptes — c'est le propriétaire qui paie le stockage) |
 | `ui/list/FilterSheet.kt` | Bottom sheet de filtres/tri de la liste |
-| `ui/sharing/CreateShareSheet.kt` | Bottom sheet de création d'un partage : portée, nombre de personnes, expiration |
-| `ui/sharing/ShareCodeDialog.kt` | Affichage **unique** du code créé (copier / partager via…) — il n'est jamais réaffiché |
+| `ui/sharing/CreateShareSheet.kt` | Bottom sheet de création : libellé, collections à exposer avec leurs statuts cochés, nombre de personnes, expiration. Zéro statut coché = collection non partagée |
+| `ui/sharing/ShareCodeDialog.kt` | Affichage **unique** du code créé (copier / partager via…) — il n'est jamais réaffiché ; rappelle ce que le code ouvre |
+| `ui/sharing/ShareLabelDialog.kt` | Renommage d'un partage, des deux côtés. Le libellé est privé de chaque côté : aucun ne franchit la frontière |
+| `ui/sharing/received/JoinShareDialog.kt` | Saisie d'un code + libellé privé. Pas de capitalisation automatique : un code base64url est sensible à la casse |
 | `ui/list/SeriesGrid.kt` | Grille des séries (mode manga) |
 | `ui/series/VolumeTile.kt` | Tuile d'un tome dans le détail série |
 | `ui/components/RecordRow.kt` | Ligne d'item dans la liste |

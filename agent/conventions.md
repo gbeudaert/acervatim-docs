@@ -21,11 +21,13 @@
 
 ## Contrats API V1 (backend)
 
+Détail complet (schéma Zod, payload Problem Details, les deux familles d'opérateurs) : [backend/contrats-api-v1.md](backend/contrats-api-v1.md).
+
 - Préfixe global `/v1/` (sauf `/health` et webhooks publics).
 - Validation **Zod via nestjs-zod** (pas de class-validator dans le nouveau code).
 - Erreurs RFC 9457 Problem Details (`application/problem+json`, `requestId` toujours présent).
 - Pagination **cursor only** : `?cursor=&limit=` (max 100, défaut 50) ; listes wrappées `{ data, meta.pagination }`, ressources unitaires brutes.
-- Filtres `field[in]` (OR) / `field[all]` (AND), champs whitelistés par endpoint via Zod (`src/common/filters/parse-filters.ts`).
+- Filtres `field[in]` (OR) / `field[all]` (AND), champs whitelistés par endpoint via Zod (`src/common/filters/parse-filters.ts`). Attention : `searchFilter` matche en substring insensible à la casse, pas en appartenance exacte comme `filterIn`.
 - Jamais de `string_contains` Prisma sur colonne JSON pour un contains insensible à la casse (MariaDB → collation bin) ; SQL paramétré avec `COLLATE utf8mb4_general_ci` (réf. `CollectionsService.matchingCollectionIds`).
 
 ## Architecture app (Android)

@@ -2,7 +2,7 @@
 
 > Remonter : [INDEX.md](INDEX.md) · Chemins relatifs à `acervatim-backend/src/`
 > Préfixe global `/v1` (posé dans `main.ts`) sauf mention contraire. Toutes les routes sont JWT-protected (`JwtAuthGuard`) sauf mention **[public]** ou **[admin]**.
-> Conventions (pagination cursor, filtres `[in]`/`[all]`, Problem Details) : [../conventions.md](../conventions.md).
+> Conventions (pagination cursor, filtres `[in]`/`[all]`, Problem Details) : [contrats-api-v1.md](contrats-api-v1.md).
 
 ## Infra
 
@@ -18,22 +18,31 @@
 |---|---|---|---|
 | `POST /v1/auth/google` **[public]** | `auth/auth.controller.ts` | `auth/auth.service.ts` | idToken Google → JWT interne ; résolution/création user via `identity-resolver.service.ts` |
 | `GET /v1/me` | `users/users.controller.ts` | `users/users.service.ts` | Profil (id opaque, dates, premium) |
-| `GET /v1/me/export` | idem | idem | Export RGPD des données : `user`, `collections`, `collectionNodes`, `items`, `oauthCredentials` (chiffrés), `subscription`, `premiumGrant`, `invitationRedemptions`, `collectionShares` (partages émis, sans `codeHash`), `shareMemberships` (partages rejoints), `auditLogs` |
+| `GET /v1/me/export` | idem | idem | Export RGPD des données : `user`, `collections`, `collectionNodes`, `items`, `oauthCredentials` (chiffrés), `subscription`, `premiumGrant`, `invitationRedemptions`, `collectionShares` (partages émis : entrées + son libellé, sans `codeHash`), `shareMemberships` (partages rejoints : entrées + son libellé), `auditLogs`. Le libellé de l'autre partie n'y figure jamais |
 | `DELETE /v1/me` | idem | idem | Suppression compte (cascade Prisma) |
 
 ## Collections / Nodes / Items — **premium-only depuis S2**
 
 > Ces trois familles portent la synchronisation, donc un coût serveur : elles sont **réservées au
-> premium**. Deux guards distincts, et confondre les deux casserait le partage (S4) :
+> premium**. Trois guards, et les confondre casserait le partage :
 >
 > | Opération | Guard | Statut vérifié |
 > |---|---|---|
-> | Écriture (POST/PATCH/DELETE) | `premium/premium.guard.ts` | Le **requérant** — seul le propriétaire écrit |
 > | Lecture (GET d'une ressource) | `premium/collection-premium.guard.ts` + `@CollectionRef(via, param)` | Le **propriétaire de la collection**, pour qu'un membre non-premium puisse lire ce qu'on lui partage |
+> | Écriture visant une collection identifiable | `premium/collection-write.guard.ts` + `@CollectionRef(...)` | Le **propriétaire**, qui doit aussi être le requérant |
+> | Écriture sans collection en paramètre (`POST /v1/collections`, gestion des partages) | `premium/premium.guard.ts` | Le **requérant** |
 >
-> Refus → `402` `/probs/payment-required`. Une ressource d'autrui reste un `404` (on ne confirme pas
-> son existence). `CollectionAccessService.resolveAccess` est le point d'extension de S4 (rôle
-> `shared` + `scope`).
+> Les deux guards à `@CollectionRef` passent par `CollectionAccessService.resolveAccess`, qui rend
+> `{ role: 'owner' }` ou `{ role: 'shared', statuses }` et pose le résultat sur la requête
+> (`@CurrentCollectionAccess`) — le service n'a rien à re-résoudre, et les statuts n'ont aucun
+> chemin par lequel arriver du client. Codes de refus :
+>
+> | Cas | Réponse |
+> |---|---|
+> | Ni propriétaire ni membre | `404` — on ne confirme pas l'existence d'une ressource d'autrui |
+> | Membre d'un partage, en écriture | `403` — il **voit** déjà la ressource, un 404 mentirait sur ce qu'il lit |
+> | Propriétaire non premium | `402` `/probs/payment-required` — y compris pour ses membres : perdre le premium **suspend** les partages émis, il ne les supprime pas |
+> | Identifiant malformé | `400` (le guard passe la main à `ParseUUIDPipe`) |
 
 | Route | Controller | Notes |
 |---|---|---|
@@ -47,24 +56,52 @@
 
 | Route | Controller | Notes |
 |---|---|---|
-| `POST /v1/collections/:collectionId/nodes` | `nodes/nodes.controller.ts` | Créer une série ; `dto/create-node.dto.ts` |
+| `POST /v1/collections/:collectionId/nodes` | `nodes/nodes.controller.ts` | Créer une série ; `dto/create-node.dto.ts`. `source` **et/ou** `unifiedData`, au moins l'un des deux ; plafond technique `nodes` vérifié |
 | `GET /v1/collections/:collectionId/nodes` | idem | `?level=serie` |
 | `GET /v1/nodes/:id` | idem | |
 | `GET /v1/nodes/:id/sources` | idem | Sources avec `rawData` |
 | `PATCH /v1/nodes/:id` | idem | `unifiedData` (re-validé par le niveau) + `note`/`comment` **à plat** (pas sous `userData` — forme historique du contrat V1, schéma `dto/node-user-data.schema.ts`) + `isWishlist`. Peut purger un nœud vide non-wishlist → `204` |
 | `POST /v1/nodes/:id/sources` | idem | Attacher une source externe (ex. MAL) ; `dto/attach-source.dto.ts` |
 
+**Deux façons de remplir un nœud, combinables.** `source` est une référence provider : si un
+adapter existe (MAL), son snapshot pré-remplit la vérité curée ; sinon (`bnf`, `mangadex`, `isbn` —
+pas d'adapter) la référence est simplement conservée dans `sources[]`. `unifiedData` est la vérité
+curée envoyée par le client, re-validée par le `nodeSchema` du niveau — c'est le chemin de la
+**saisie manuelle**, sans lequel une série créée à la main dans l'app ne serait pas synchronisable.
+Quand les deux sont là, `unifiedData` l'emporte : c'est ce que l'utilisateur voit dans son app.
+Une `source` vers un provider sans adapter **et** sans `unifiedData` reste un `400` : rien ne
+décrirait le nœud. La dédup par `source` (idempotence des imports provider) est inchangée ; sans
+`source` il n'y a rien sur quoi dédupliquer, le client garde l'`id` rendu et repasse par `PATCH`.
+
 ## Items
 
 | Route | Controller | Notes |
 |---|---|---|
-| `POST /v1/collections/:collectionId/items` | `items/items.controller.ts` | Validation `unifiedData` par le profil du type ; plafond technique vérifié |
+| `POST /v1/collections/:collectionId/items` | `items/items.controller.ts` | Validation `unifiedData` par le profil du type ; plafond technique vérifié. Série parente par `node` (réf. provider, upsert) **ou** `nodeId` (série déjà créée) — exclusifs |
 | `GET /v1/collections/:collectionId/items` | idem | Projection légère dépendante du type ; filtres `provider[in]`, `nodeId`. Toutes les projections exposent `status` (statut de possession résolu, `OWNED` par défaut) |
 | `GET /v1/items/:id` | idem | |
 | `GET /v1/items/:id/sources` | idem | |
 | `POST /v1/items/:id/sources` | idem | Attacher une source (ex. ISBN/BnF) |
-| `PATCH /v1/items/:id` | idem | `unifiedData` (remplacé en bloc) / `userData` (mergé) — schéma `dto/item-user-data.schema.ts`, dont `status: OWNED\|WISHLIST\|IGNORED\|null` |
+| `PATCH /v1/items/:id` | idem | `unifiedData` (remplacé en bloc) / `userData` (mergé) — schéma `dto/item-user-data.schema.ts`, dont `status: OWNED\|WISHLIST\|IGNORED\|null` — plus `nodeId`/`volume` (identité structurelle du tome, `null` accepté) |
 | `DELETE /v1/items/:id` | idem | |
+
+**Tome et série (types hiérarchiques).** Rien n'est exigé : ni série, ni numéro de tome. Supprimer
+une série côté app laisse ses tomes orphelins (le modèle app les conserve) et un hors-série n'a pas
+de numéro — les refuser ferait de la synchronisation une perte de données, pas un miroir. Sur un
+type **plat** (vinyl) `node`/`nodeId`/`volume` restent interdits (`400`).
+
+- `nodeId` — série déjà créée par `POST /collections/:id/nodes`. C'est le chemin de la
+  **synchronisation** : le client pousse ses nœuds, puis ses items, comme collections → items. Un
+  `nodeId` hors de la collection visée ou d'un autre compte est un `404`, jamais un `400` (même
+  règle qu'en lecture : pas d'oracle d'existence).
+- `node` — référence provider, le nœud étant upserté s'il n'existe pas. Chemin des imports enrichis
+  (MAL), qui ne connaissent pas encore l'`id` serveur du nœud. Sans adapter pour ce provider, un
+  item ne peut pas inventer la vérité curée de son parent : `400` explicite qui renvoie vers
+  `POST /collections/:id/nodes` puis `nodeId`.
+- `PATCH /v1/items/:id` accepte `nodeId` et `volume` (tous deux `null`-ables) : sans eux, un
+  changement de série ou de numéro resterait local et le miroir garderait l'ancienne valeur.
+  Détacher le dernier tome d'une série non désirée la purge, comme le fait sa suppression.
+  `(série, volume)` déjà pris → `409`.
 
 ## Recherche externe
 
@@ -108,26 +145,73 @@ Cron de réconciliation : `subscriptions/subscriptions.cron.ts`. Statuts : `subs
 | `POST /v1/admin/invitations` **[admin]** | `invitations/invitations.controller.ts` | Protégé par `admin-token.guard.ts` (token admin, pas JWT user). Code retourné une seule fois |
 | `POST /v1/invitations/redeem` | idem | JWT requis ; code haché HMAC comparé à `Invitation.codeHash` ; peut créer un `PremiumGrant` |
 
-## Partage de collection — **S3 (modèle + CRUD)**
+## Partage de collections — **S3 (modèle + CRUD) · S4 (lecture partagée) · S5 (multi-collections, statuts, libellés)**
 
 > Le partage n'ouvre **aucune route de lecture** : il étend l'autorisation des routes
-> `collections`/`items`/`nodes` ci-dessus, ce qui reste à faire (S4). Après S3, un membre a rejoint
-> mais ne voit encore rien de la collection.
+> `collections`/`items`/`nodes` ci-dessus. Un membre lit donc la collection partagée par les mêmes
+> URLs, avec les mêmes DTOs et la même pagination que le propriétaire — seuls le contenu retenu et
+> la part visible de `userData` changent (cf. le tableau des statuts ci-dessous).
 > Modèle et décisions : [partage-de-collection.md](partage-de-collection.md).
+
+> **Rupture S5** : un partage porte **N collections**, chacune avec son jeu de statuts. Les routes
+> sont ancrées sur `/v1/shares` — `POST`/`GET /v1/collections/:id/shares` **n'existent plus**, et
+> `scope` a disparu du contrat.
 
 | Route | Controller | Notes |
 |---|---|---|
-| `POST /v1/collections/:id/shares` | `sharing/sharing.controller.ts` | JWT + `PremiumGuard` (**requérant**) + propriétaire. `{ scope: all\|owned\|wantlist, maxUses?, expiresAt? }` → `{ id, code, … }`. Code en clair **une seule fois** ; seul son HMAC (`SHARE_CODE_PEPPER`) est stocké |
-| `GET /v1/collections/:id/shares` | idem | Propriétaire. Partages **non révoqués** (les expirés restent listés, `expiresAt` le dit) + membres actifs (`memberUserId` opaque, `redeemedAt`) |
+| `POST /v1/shares` | `sharing/sharing.controller.ts` | JWT + `PremiumGuard` (**requérant**). `{ label?, collections: [{ collectionId, statuses: [OWNED\|WISHLIST\|IGNORED] }], maxUses?, expiresAt? }` → `{ id, code, label, collections[], … }`. Code en clair **une seule fois** ; seul son HMAC (`SHARE_CODE_PEPPER`) est stocké. `404` si une collection n'est pas au requérant, sans dire laquelle |
+| `GET /v1/shares[?collectionId=]` | idem | Propriétaire, **sans gate premium**. Partages **non révoqués** (les expirés restent listés, `expiresAt` le dit) + collections exposées + membres actifs (`memberUserId` opaque, `redeemedAt`). Le filtre sert un écran ancré sur une collection |
+| `PATCH /v1/shares/:id` | idem | Propriétaire. `{ label }` **et rien d'autre** : re-scoper un partage vivant changerait sans le dire ce que ses membres voient |
 | `DELETE /v1/shares/:id` | idem | Propriétaire. Révoque le partage **et** tous ses membres (marquage `revokedAt`, jamais de suppression physique). `204`, idempotent |
 | `DELETE /v1/shares/:id/members/:memberUserId` | idem | Propriétaire. Éjecte un membre ; le code reste valide pour les autres et ne le fait pas revenir. `204`, idempotent |
-| `POST /v1/shares/redeem` | idem | JWT, **pas** de gate premium (c'est le propriétaire qui paie le stockage). `{ code }` → adhésion + résumé de collection. Idempotent (`alreadyMember`). Bucket throttle dédié 5/min |
-| `GET /v1/shares/received` | idem | Partages que j'ai rejoints et qui vivent encore (`shareId`, `collectionId`, `scope`, `redeemedAt`, résumé de collection) |
+| `POST /v1/shares/redeem` | idem | JWT, **pas** de gate premium (c'est le propriétaire qui paie le stockage). `{ code, label? }` → adhésion + collections exposées avec leur `itemCount` visible. Idempotent (`alreadyMember`) ; un `label` fourni est appliqué même sur un redeem répété. Bucket throttle dédié 5/min |
+| `GET /v1/shares/received` | idem | Partages que j'ai rejoints et qui vivent encore (`shareId`, **mon** `label`, `redeemedAt`, `collections[]`) |
+| `PATCH /v1/shares/received/:shareId` | idem | Membre. `{ label }` — le sien, que le propriétaire ne voit pas |
+
+- **Deux libellés cloisonnés** : celui du propriétaire (« Wantlist manga avec Alice ») et celui du
+  membre (« Wantlist manga de Bob ») ne franchissent jamais la frontière — un partage à plusieurs
+  membres ne doit pas révéler à l'un comment le propriétaire a nommé l'autre. Ni log, ni métadonnée
+  d'audit ; dans l'export RGPD de son auteur seulement. Vide ou blancs seuls ⇒ `null`.
+- **Aucun plafond sur le nombre de partages** : `maxUses ≤ 100` borne les membres d'un code, pas le
+  nombre de codes. `LimitsService` ne compte que collections, nœuds et items.
+- Les entrées sortent **triées par nom de collection** : sans `orderBy`, Prisma les rend dans
+  l'ordre de la clé composite, donc par UUID.
 
 - **Aucun oracle d'existence** : code inconnu, révoqué, expiré, épuisé ou membre éjecté renvoient
   tous le même `404` `/probs/share-code-invalid`, même `detail`. Seul le propriétaire qui tente de
   rejoindre son propre partage obtient un `400` distinct — il connaît déjà son code.
 - `usedCount` est incrémenté sous **garde optimiste** (`updateMany where usedCount < maxUses`) dans
   la transaction du redeem : deux redeems concurrents sur la dernière place ne passent pas tous deux.
-- Audit : `share.create`, `share.revoke`, `share.member.revoke`, `share.redeem` (`target = shareId`,
-  `metadata = { scope }`), jamais le code.
+- Audit : `share.create`, `share.revoke`, `share.member.revoke`, `share.redeem` (`target = shareId`).
+  `share.create` porte `{ collections: n }` — ni le code, ni le libellé, ni les identifiants de
+  collection.
+
+### Ce qu'un membre voit (S4, revu en S5)
+
+| Statuts exposés | Items | Nœuds (séries) |
+|---|---|---|
+| Les trois | Tous | Tous, y compris un nœud encore vide |
+| Contenant `OWNED` | Statut absent/inconnu compris (c'est le défaut) | Ceux qui gardent au moins un tome retenu |
+| Contenant `WISHLIST` | Les désirés | + les `isWishlist` **sans aucun tome** |
+| Sans `IGNORED` | Les ignorés disparaissent | — |
+
+- Le défaut « statut absent = `OWNED` » vient de `resolveItemStatus` (S1) et n'est pas redéfini :
+  `sharing/share-filter.service.ts` en tient le miroir SQL (`CASE WHEN … ELSE 'OWNED' END`, liste et
+  défaut importés du module d'origine), et `itemVisibleUnderStatuses` le pendant TS pour les
+  lectures unitaires.
+- Un membre détenant plusieurs partages actifs de la même collection voit **l'union** des statuts.
+- **Hors des statuts exposés = `404`**, jamais `403` : sinon un membre à qui l'on ne partage que
+  les possédés déduirait l'existence d'un désiré en balayant des ids.
+- **Compteurs recalculés** sous les statuts exposés : `Collection.itemCount`, le résumé `hierarchy`,
+  `ownedCount` d'un nœud, et l'`itemCount` par collection de `GET /v1/shares/received`. La colonne dénormalisée
+  compterait la collection entière et afficherait « 240 éléments » sur une vue qui en montre 12.
+- **`userData` réduit** à une liste blanche pour un membre : passent `status`, `rating`,
+  `lastPlayedAt` (item) et `note` (nœud, appréciation 0-10) ; ne passent ni le texte libre
+  (`note` d'item, `comment` de nœud) ni le financier (`purchasePrice`). Liste blanche et non noire :
+  un champ ajouté plus tard reste invisible tant qu'il n'a pas été jugé partageable.
+- `sources[]` (y compris `rawData`) sortent tels quels : ce sont des fiches de catalogue public
+  (BnF, Google Books, MangaDex, Discogs, MAL, TMDB), les adapters ne récupèrent rien qui relève d'un
+  compte.
+- `GET /v1/collections` ne liste **que les siennes** : une collection reçue se lit par
+  `GET /v1/shares/received`, pour ne pas mélanger « mes collections » et celles d'autrui dans les
+  compteurs, les plafonds et les écrans.

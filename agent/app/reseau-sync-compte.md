@@ -34,25 +34,42 @@
 
 ## Partages de collection (`data/remote/sharing/`)
 
-`SharingRepositoryImpl.kt` — implémente `domain/repository/SharingRepository` : `POST/GET
-/v1/collections/:id/shares`, `DELETE /v1/shares/:id`, `DELETE /v1/shares/:id/members/:memberUserId`.
-Côté app c'est **le seul** point d'entrée du partage ; le volet membre (`redeem`, `shares/received`)
-n'est pas encore branché (sprint A4).
+Deux repositories, deux responsabilités qu'il ne faut pas confondre :
 
-- **Sans cache.** Un partage n'a pas de vie locale : ni Room, ni DataStore. Seule exception au
-  « tout distant » : `remoteCollectionId(type)` lit le `remoteId` de la collection locale
+| Repository | Rôle | Routes |
+|---|---|---|
+| `SharingRepositoryImpl` | **Gérer** les partages, dans les deux sens | `POST/GET /v1/shares`, `PATCH/DELETE /v1/shares/:id`, `DELETE /v1/shares/:id/members/:memberUserId`, `POST /v1/shares/redeem`, `GET /v1/shares/received`, `PATCH /v1/shares/received/:shareId` |
+| `SharedCollectionRepositoryImpl` | **Lire** une collection reçue | Aucune route dédiée : les routes de lecture normales (`GET /v1/collections/:id/items`, `GET /v1/items/:id`), dont l'autorisation est étendue serveur-side |
+
+Un partage porte **N collections**, chacune avec son jeu de statuts (`OWNED`/`WISHLIST`/`IGNORED`) :
+il n'appartient plus à une collection, d'où l'ancrage sur `/v1/shares` et la disparition du champ
+`scope`. Les anciennes portées ne survivent que comme raccourcis d'affichage (`ShareScopePreset`).
+
+- **Sans cache, des deux côtés.** Un partage n'a pas de vie locale : ni Room, ni DataStore. Seule
+  exception au « tout distant » : `sharableCollections()` lit les `remoteId` des collections locales
   (`CollectionDao`) — le partage porte sur la collection **serveur**, donc une collection jamais
-  synchronisée n'est pas partageable (l'écran le dit au lieu d'échouer).
-- **Le code n'existe qu'une fois.** `POST` le renvoie en clair, le serveur n'en garde que le HMAC.
-  Il ne transite ni par un log, ni par `SavedStateHandle`, ni par aucun stockage — `SharingViewModel`
-  le tient dans un `MutableStateFlow` vidé à la fermeture du dialogue (test dédié).
+  synchronisée n'est pas partageable (elle n'apparaît pas dans le sélecteur).
+- **Les collections reçues ne sont jamais persistées.** Elles ne sont pas les données de
+  l'utilisateur : les mettre en Room les ferait entrer dans son export et sa sauvegarde ZIP, et
+  laisserait une copie fantôme après révocation. Un test verrouille l'absence de dépendance à un
+  `Dao`/`Database`/`DataStore` dans `SharedCollectionRepositoryImpl`.
+- **Le code n'existe qu'une fois.** `POST /v1/shares` le renvoie en clair, le serveur n'en garde que
+  le HMAC. Il ne transite ni par un log, ni par `SavedStateHandle`, ni par aucun stockage —
+  `SharingViewModel` le tient dans un `MutableStateFlow` vidé à la fermeture du dialogue (test dédié).
+- **Le libellé est privé de chaque côté.** Le propriétaire et le membre nomment le partage chacun
+  pour soi ; aucun des deux ne franchit la frontière. Pour l'**effacer**, on envoie la chaîne vide et
+  non `null` : le `Json` de l'app est en `explicitNulls = false`, un `null` ne serait pas sérialisé
+  et le schéma strict du serveur (`label` requis) refuserait le corps vide.
 - **Erreurs traduites dans la couche data** : `ApiException`/`IOException` →
-  `domain/model/sharing/SharingException` (`PREMIUM_REQUIRED` / `NETWORK` / `UNKNOWN`), pour que
-  l'UI n'ait pas à connaître les statuts HTTP. Le 402 est traité comme un état (premium expiré entre
-  l'affichage et l'action), pas comme une panne : la révocation reste ouverte, seule la création
-  se ferme.
+  `domain/model/sharing/SharingException`, pour que l'UI n'ait pas à connaître les statuts HTTP.
+  Le `404` n'a pas le même sens des deux côtés — `GONE` sur une action de propriétaire, mais
+  `CODE_INVALID` sur un `redeem`, où le serveur confond volontairement cinq refus pour ne pas offrir
+  d'oracle. Le `402` est un **état**, pas une panne : côté propriétaire le premium a expiré (la
+  révocation reste ouverte, seule la création se ferme) ; côté membre le **propriétaire** a perdu son
+  premium, ce qui suspend l'accès sans le supprimer.
 
-Mapping DTO : `data/remote/mapper/SharingMapper.kt` · DTOs : `data/remote/dto/ShareDto.kt`.
+Mapping DTO : `data/remote/mapper/SharingMapper.kt` · DTOs : `data/remote/dto/ShareDto.kt` ·
+Modèles : `domain/model/sharing/SharingModels.kt` (gestion) et `SharedBrowsing.kt` (lecture membre).
 
 ## Recherche externe (`data/remote/search/`)
 
@@ -69,11 +86,39 @@ Mapping DTO : `data/remote/mapper/SharingMapper.kt` · DTOs : `data/remote/dto/S
 
 ### Ce qui est réellement synchronisé
 
-**Seul le type `vinyl` transite aujourd'hui.** `SyncManagerImpl.push()` saute tout item dont le
-`collectionType` n'est pas `VINYL`, et `pull()` ne parcourt que les collections vinyle. Les
-**nœuds (séries manga) ne sont ni poussés ni tirés** : `FacadeMapper.seriesToRemote()` /
-`remoteToSeries()` existent et sont testés, mais **aucun appelant** dans le code de production. Le
-mapping manga est donc prêt, pas actif.
+**Vinyle et manga**, depuis le backend 0.8.1 (2026-08-23). Le filtre `VINYL` du push et du pull est
+levé, et les **nœuds (séries) transitent** : `FacadeMapper.seriesToRemote()` / `remoteToSeries()`,
+qui existaient sans appelant, sont désormais câblés.
+
+**L'ordre est structurant, au push comme au pull** : collections → **séries** → items. Un tome se
+rattache à sa série par l'`id serveur` du nœud, qui n'existe qu'une fois la série poussée ; et un
+tome tiré avant sa série n'aurait aucune série locale où se rattacher. Un tome dont la série n'est
+pas encore synchronisée est **reporté** (compté en `skipped`) plutôt que poussé détaché — le lien
+serait sinon perdu sans que rien ne le signale.
+
+Trois pièges du contrat, tous verrouillés par `SyncRequestContractTest` :
+
+- **`node` et `nodeId` sont exclusifs.** `nodeId` (id serveur) est le chemin de la synchronisation ;
+  `node` (référence provider, upsert côté serveur) celui des imports enrichis MAL. Les envoyer
+  ensemble est un `400`.
+- **`explicitNulls = false` rend « effacer » et « ne pas toucher » indistinguables.** Sur le `PATCH`
+  d'un tome, `nodeId` et `volume` sont donc typés `JsonElement` et passent par `nodeRef()` /
+  `volumeRef()` : `JsonNull` s'écrit `null`, un `null` Kotlin serait omis et le serveur garderait
+  l'ancienne valeur. Sans ça, détacher un tome de sa série resterait local.
+- **`isWishlist` n'est jamais envoyé.** `PATCH /nodes/:id` **supprime** le nœud quand il reçoit
+  `isWishlist: false` sur un nœud sans tome. Or `RemoteNode.isWishlist` vaut `false` par défaut et
+  l'app ne modélise pas ce drapeau : le transmettre aurait purgé toute série dont les tomes ne sont
+  pas encore poussés, pour la recréer à la sync suivante — en boucle.
+
+Deux points d'attention côté pull :
+
+- **Un tome n'a pas de `creators`.** `MangaItemSchema` est `.strict()` et n'en porte pas : l'auteur
+  d'un tome est celui de sa **série**, exactement comme le fait la saisie locale
+  (`AddEditMangaViewModel`), avec le même repli `"Inconnu"`. Sans ce repli, tout tome tiré du serveur
+  tomberait sur l'invariant « au moins un artiste ».
+- **Dédup des séries par clé naturelle** (type + titre + auteur normalisés) en plus du `remoteId`,
+  comme les items le font par code-barres/ISBN : une série créée hors-ligne existe déjà localement
+  sous un autre id, et l'upsert buterait sinon sur `index_series_natural_key`.
 
 ### Refus du serveur : deux codes, deux comportements
 

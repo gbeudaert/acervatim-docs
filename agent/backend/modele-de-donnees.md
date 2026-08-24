@@ -23,7 +23,7 @@ AuditLog · ApiCache                     (techniques, sans FK user obligatoire)
 | `User` (`users`) | Identité anonyme | `googleSubHash` unique (HMAC-SHA-256 du sub Google) ; **aucune** donnée perso |
 | `Collection` (`collections`) | Collection d'un user | FK `typeId` → `CollectionType` (Restrict) ; `itemCount` dénormalisé |
 | `CollectionType` (`collection_types`) | Constantes de types | `code` logique stable (`vinyl`, `manga`, …) ; seedé (`prisma/seed.ts`) |
-| `Item` (`items`) | Album / tome | `unifiedData` (vérité curée) · `sources[]` (snapshots providers) · `userData` (rating, `status` possédé/désiré…) ; `nodeId`+`volume` pour manga (unique `[userId, nodeId, volume]`), null pour types plats |
+| `Item` (`items`) | Album / tome | `unifiedData` (vérité curée) · `sources[]` (snapshots providers) · `userData` (rating, `status` possédé/désiré…) ; `nodeId`+`volume` pour manga (unique `[userId, nodeId, volume]`), null pour les types plats — mais aussi pour un tome orphelin ou hors numérotation, que MySQL ne déduplique pas puisque `NULL` y reste distinct |
 | `CollectionNode` (`collection_nodes`) | Série manga (arbre) | `level` (`serie`/`set`), `parentId` auto-référent, mêmes triplets JSON qu'`Item`, `isWishlist` survit à 0 tome possédé |
 | `OauthCredential` (`oauth_credentials`) | Tokens Discogs/MAL/TMDB | PK `[userId, provider]` ; tokens chiffrés AES-256-GCM + `encryptedWithKeyVersion` |
 | `Subscription` (`subscriptions`) | Abonnement Google Play | Statuts `active/grace_period/on_hold/paused/cancelled/expired` ; `purchaseToken` unique ; index `[status, expiresAt]` pour le cron |

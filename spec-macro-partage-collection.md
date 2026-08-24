@@ -11,14 +11,27 @@
 Un utilisateur premium partage une de ses collections avec d'autres membres (usage typique : le
 foyer), en choisissant ce qui est exposé :
 
-| Portée (`scope`) | Ce que voit le membre |
-|---|---|
-| `ALL` | Toute la collection |
-| `OWNED` | Uniquement les éléments possédés |
-| `WANTLIST` | Uniquement la wantlist (éléments désirés) |
+Un code de partage expose **une ou plusieurs collections**, chacune restreinte aux **statuts** de
+son choix :
 
-**Décisions cadrantes** (2026-08-20) :
+| Statuts cochés pour une collection | Ce que le membre y voit |
+|---|---|
+| `OWNED` | Les éléments possédés (statut absent compris : c'est le défaut) |
+| `WISHLIST` | Les éléments désirés, et les séries désirées sans aucun tome |
+| `IGNORED` | Les éléments écartés |
+
+Les trois portées d'origine (`ALL`/`OWNED`/`WANTLIST`) ne sont plus qu'un raccourci d'interface :
+`ALL` = les trois cases, `OWNED` = une seule, `WANTLIST` = une seule. L'ensemble libre rend
+exprimable ce qu'elles interdisaient — « possédés **et** désirés, sans les ignorés ».
+
+**Décisions cadrantes** (2026-08-20, complétées le 2026-08-22) :
 - Partage **par collection**, pas par compte entier — on peut partager ses vinyles sans ses mangas.
+- Un partage peut réunir **plusieurs collections** sous un seul code, avec des statuts différents
+  pour chacune.
+- **Autant de partages qu'on veut** : aucun plafond.
+- Chaque partage porte un **libellé libre de chaque côté** — « Wantlist manga avec Alice » chez le
+  propriétaire, « Wantlist manga de Bob » chez le membre. Les deux sont privés : aucun ne franchit
+  la frontière.
 - Accès **lecture seule** pour le membre : pas d'ajout/édition/suppression. Garanti côté **guard**,
   pas seulement côté UI.
 - Fonctionnalité **Premium**, côté propriétaire. Un membre non-premium peut rejoindre et consulter.
@@ -55,7 +68,7 @@ deux comblés (sprints **S1** et **A1**) :
   était entièrement absent côté client, pas seulement `status`. Le canal est désormais ouvert, avec
   un repli sur le cliché local (`resolveStatus`) pour ne rien perdre des items déjà synchronisés.
 - **Backend** : `ItemUserDataSchema` porte maintenant `status`, avec `DEFAULT_ITEM_STATUS = 'OWNED'`
-  et le helper `resolveItemStatus` sur lequel s'appuiera le filtrage par portée. Les trois profils
+  et le helper `resolveItemStatus` sur lequel s'appuie le filtrage des partages. Les trois profils
   (`vinyl`, `manga`, `fallback`) projettent le statut en vue liste.
 
 Sans cette brique, `OWNED`/`WANTLIST` n'auraient pu filtrer que des séries manga
@@ -78,7 +91,7 @@ schémas serveur (`ItemUserDataSchema.rating`/`purchasePrice`/`lastPlayedAt`,
 pas. Le travail est donc très majoritairement côté app (**A1bis**), le backend se limitant à combler
 les trous restants et à verrouiller le contrat par des tests de round-trip (**S1bis**).
 
-Cette brique **ne sert pas au partage** — les portées n'ont besoin que du `status`. Elle peut donc
+Cette brique **ne sert pas au partage** — le filtrage n'a besoin que du `status`. Elle peut donc
 être menée en parallèle ou différée, mais elle conditionne la faisabilité du web.
 
 > **Limite structurelle à trancher avant le web** : `coverPath` est une photo prise par
@@ -87,19 +100,25 @@ Cette brique **ne sert pas au partage** — les portées n'ont besoin que du `st
 > jaquettes-là ; seules les `coverUrl` des providers passent. C'est un arbitrage produit (stocker des
 > images côté serveur, accepter un web dégradé, ou autre), pas un bug à corriger dans un sprint.
 
-### Brique 2 — Le gate Premium sur la synchronisation
+### Brique 2 — Le gate Premium sur la synchronisation ✅
 
-Aujourd'hui `collections.controller.ts`, `items.controller.ts` et `nodes.controller.ts` ne portent
-que `@UseGuards(JwtAuthGuard)` : **aucun** `PremiumGuard`. Le seul frein est `QuotaService`, appelé
-à la création uniquement, qui laisse passer sous le seuil gratuit.
+*(Livrée le 2026-08-21, sprint S2 — le constat ci-dessous décrit l'état d'avant.)*
+
+`collections.controller.ts`, `items.controller.ts` et `nodes.controller.ts` ne portaient
+que `@UseGuards(JwtAuthGuard)` : **aucun** `PremiumGuard`. Le seul frein était `QuotaService`, appelé
+à la création uniquement, qui laissait passer sous le seuil gratuit.
 
 Subtilité à ne pas rater — le `PremiumGuard` actuel vérifie `req.userId`, c'est-à-dire **le
 requérant** :
 
 | Opération | Premium de qui ? |
 |---|---|
-| Écriture (POST/PATCH/DELETE) | Du **requérant** — seul le propriétaire écrit. `PremiumGuard` convient tel quel. |
+| Écriture (POST/PATCH/DELETE) | Du **requérant** — seul le propriétaire écrit. |
 | Lecture (GET) | Du **propriétaire de la collection**, pas du requérant. Sinon un membre gratuit ne pourrait pas lire ce qu'on lui partage — ce qui viderait la fonctionnalité de son sens. |
+
+S4 a complété le tableau côté écriture : `CollectionWriteGuard` résout d'abord le rôle, refuse un
+membre en `403`, puis vérifie le premium. Un `PremiumGuard` seul aurait laissé un membre premium
+écrire dans la collection d'autrui.
 
 ### Brique 3 — Le partage lui-même
 
@@ -109,15 +128,34 @@ requérant** :
 calqués sur le patron `Invitation` existant — code hors-bande, seul le HMAC stocké, pepper dédié
 `SHARE_CODE_PEPPER`. Six routes dans le module `sharing/` (créer, lister, révoquer, éjecter un
 membre, rejoindre, lister ses partages reçus), audit `share.*`, export RGPD des deux sens.
-**Reste S4** : tant que la lecture n'est pas étendue, un membre rejoint mais ne voit rien.
+
+**Lecture partagée livrée le 2026-08-22** (sprint S4) : `resolveAccess` rend désormais
+`owner | shared`, les routes de lecture de `collections`/`items`/`nodes` filtrent, et toute mutation
+d'un membre est refusée **au guard** (`403`).
+
+**Partage multi-collections livré le 2026-08-22** (sprint S5) : `CollectionShareEntry` (N
+collections par code, statuts au choix pour chacune), libellé privé de chaque côté, routes ancrées
+sur `/v1/shares`. Le chantier est complet côté serveur.
+
+**UI refondue et vue membre livrées le 2026-08-22** (sprints **A3bis** et **A4**) : S5 avait cassé
+le contrat de A3 (`POST`/`GET /v1/collections/:id/shares`, champ `scope`), l'écran propriétaire a été
+reconstruit sur `/v1/shares` et remonté au niveau du compte — un partage n'appartenant plus à une
+collection. Le membre rejoint par code sans être premium, nomme le partage pour lui-même, et consulte
+en lecture seule. **Le chantier est complet des deux côtés.**
+
+> **Décision structurante côté membre** : les collections reçues en partage ne sont **jamais
+> persistées** — lecture en ligne uniquement, par un chemin séparé de Room. Ce ne sont pas les
+> données de l'utilisateur : les mettre en cache les ferait entrer dans son export et sa sauvegarde
+> ZIP, et laisserait une copie fantôme après révocation. Le prix assumé est que les écrans de
+> liste/détail existants, qui lisent Room, ne sont pas réutilisables tels quels.
 
 **Pourquoi un code et pas « inviter par email »** : les comptes sont anonymes (`googleSubHash`,
 aucun email ni nom en base). Chercher un membre par identifiant est structurellement impossible et
 doit le rester — le code voyage hors-bande, comme les codes d'invitation premium.
 
-Le filtrage par `scope` n'ajoute pas de routes de lecture : il étend l'autorisation existante de
-`collections/items/nodes` (`resolveAccess(userId, collectionId) → owner | shared+scope`), le
-`scope` étant injecté serveur-side dans le `where` et **jamais** accepté depuis le client.
+Le filtrage n'ajoute pas de routes de lecture : il étend l'autorisation existante de
+`collections/items/nodes` (`resolveAccess(userId, collectionId) → owner | shared+statuses`), les
+statuts étant injectés serveur-side dans le `where` et **jamais** acceptés depuis le client.
 
 ## 4. Ordre d'exécution
 
@@ -134,9 +172,12 @@ S2 gate premium sync (owner-aware)       A2 écran Compte : sync premium-only
         ▼                                        │
 S3 modèle + CRUD partages  ✅ FAIT                │
         │                                        ▼
-        │                                A3 UI propriétaire (créer/révoquer)  ✅ FAIT
-        ▼                                        │
-S4 lecture partagée + scopes ◄───────────────────┴──► A4 UI membre (lecture seule)
+        │                                A3 UI propriétaire (créer/révoquer)  🗄️ HISTORIQUE
+        ▼                                        │      (contrat cassé par S5)
+S4 lecture partagée ✅ FAIT                       │
+        │                                        ▼
+        ▼                                A3bis UI propriétaire, nouveau contrat  ✅ FAIT
+S5 N collections + statuts + libellés ✅ FAIT ────┴──► A4 UI membre (lecture seule)  ✅ FAIT
 ```
 
 - **S1/A1 sont jumeaux** et **livrés** : le contrat a changé des deux côtés (backend tolérant
@@ -146,9 +187,13 @@ S4 lecture partagée + scopes ◄───────────────�
 - **S2** peut se faire en parallèle de S3, mais doit précéder la mise en service réelle du partage.
   Les deux sont livrés.
 - **S3/A3 sont livrés** : un propriétaire premium peut émettre un code, voir qui a rejoint et
-  révoquer. **Tant que S4 n'est pas là, le membre qui rejoint ne voit rien** — la lecture n'est pas
-  encore étendue. Le chantier n'est donc pas utilisable de bout en bout.
-- **S4 dépend de S1 et S3** ; **A4 dépend de S4**. Ce sont les deux seuls sprints restants.
+  révoquer.
+- **S4 est livré** : le membre qui rejoint lit effectivement la collection, filtrée.
+- **S5 est livré** : un code porte N collections avec leurs statuts, et chacun nomme le partage pour
+  soi.
+- **A3bis et A4 sont livrés** (2026-08-22) et closent le chantier : ils partagent la couche
+  data/domaine du partage, les séparer aurait produit deux contrats successifs pour un seul travail.
+  Ne reste hors partage que **S1bis/A1bis**, qui servent la version web.
 
 ## 5. Rétro-compatibilité
 
@@ -164,12 +209,20 @@ S4 lecture partagée + scopes ◄───────────────�
 - Sort de `common/quota/` : retrait sec ou requalification en plafond technique anti-abus
   (non communiqué, non lié au palier) — à trancher au Sprint C0 de
   [sprints-conformite-offre.md](sprints-conformite-offre.md).
-- Que devient un partage émis quand le propriétaire perd son statut premium : suspension (402)
-  plutôt que suppression, à confirmer.
-- Anti-abus sur le nombre de partages/membres par collection : pas de limite produit décidée. S3 ne
-  borne que le `maxUses` d'un code (≤ 100, validation de DTO), pas le nombre de partages.
+- ~~Que devient un partage émis quand le propriétaire perd son statut premium~~ — **tranché en S4** :
+  **suspension** (`402` pour le propriétaire comme pour ses membres), jamais de suppression. Rendre
+  le premium rend l'accès.
+- ~~Anti-abus sur le nombre de partages~~ — **tranché le 2026-08-22** : aucun plafond. Seul le
+  `maxUses` d'un code reste borné (≤ 100, validation de DTO), et il borne les membres de ce code.
 - Notification du propriétaire quand un membre rejoint : hors périmètre v1 (le pull sur
-  `GET /v1/collections/:id/shares` suffit).
+  `GET /v1/shares` suffit).
+- **Vue hiérarchique d'une collection manga partagée** : la vue membre est plate, la projection
+  légère portant `serie` et `volume` en sous-ligne. Reconstruire l'arbre demanderait
+  `GET /v1/collections/:id/nodes` et une navigation à deux niveaux, pour un écran de consultation —
+  à reprendre si l'usage le demande.
+- **Jaquettes photographiées invisibles pour un membre** : `coverPath` est local, le backend ne
+  stocke aucune image (invariant privacy). C'est le même arbitrage produit que pour le web (§3,
+  brique 1bis), pas un bug de A4.
 
 ## 7. Documents liés
 
@@ -178,4 +231,4 @@ S4 lecture partagée + scopes ◄───────────────�
 | [agent/backend/partage-de-collection.md](agent/backend/partage-de-collection.md) | Spec technique backend : modèle Prisma, endpoints, filtrage, sécurité |
 | [sprints-conformite-offre.md](sprints-conformite-offre.md) | Modèle d'offre, écarts code↔cible, sprints C0→C5 |
 | `acervatim-backend/docs/interne/sprints/sharing/` | Sprints backend S1, S1bis, S2→S4 (gitignoré) |
-| `acervatim-app/docs/interne/sprints/sharing/` | Sprints app A1, A1bis, A2→A4 (gitignoré) |
+| `acervatim-app/docs/interne/sprints/sharing/` | Sprints app A1, A1bis, A2, A3 (historique), A3bis, A4 (gitignoré) |
