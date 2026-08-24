@@ -16,6 +16,7 @@ Documentation technique pour contribuer à Acervatim ou intégrer son API.
 - [Déploiement du backend](deploiement.md) — conteneur Podman, reverse proxy, migrations.
 - [Sources de données & pivot ISBN](sources-et-pivot-isbn.md) — provenance des champs, flux scan, pivot BnF → MangaDex (MAL en repli).
 - [Publication Play Store](publication-play-store.md) — release de l'application Android.
+- [Build locale de l'app](build-app-locale.md) — variante debug installable à côté de celle du Play Store.
 
 > Le code reste la source de vérité : les dépôts `acervatim-app` (application) et
 > `acervatim-backend` (API) font foi pour le détail. Ces pages en donnent la vue normalisée.

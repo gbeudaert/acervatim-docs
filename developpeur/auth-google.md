@@ -40,7 +40,9 @@ Manager. Le client Android est seulement « connu » de Google via sa SHA-1.
    placer dans `strings.xml` (`google_server_client_id`) **et** dans le backend (`GOOGLE_CLIENT_ID`).
    Pas d'URI de redirection nécessaire pour la vérification d'`id_token` mobile.
 4. **Client Android** (*Android*) : package `app.acervatim` + **empreinte SHA-1**. Un client par
-   empreinte.
+   empreinte — et un client par **package** : la build locale s'installant sous
+   `app.acervatim.dev` (cf. [Build locale de l'app](build-app-locale.md)), elle exige son propre
+   client Android `app.acervatim.dev` + SHA-1 debug, sinon `DEVELOPER_ERROR` (`10`).
 
 ### Les trois SHA-1 à déclarer
 
