@@ -28,11 +28,16 @@ footer_content: >-
 # Documents de travail / plan / doc agent IA, non publies comme pages du site.
 exclude:
   - agent/
+  - AGENTS.md
+  - CLAUDE.md
+  - _bmad/
+  - _bmad-output/
   - plan-consolidation-documentation.md
   - sprints-conformite-offre.md
   - spec-macro-partage-collection.md
   - spec-macro-recherche-tris-galerie.md
   - spec-macro-export-sources-externes.md
+  - spec-repli-google-books-pivot.md
   - private/
   - vendor/
   - Gemfile

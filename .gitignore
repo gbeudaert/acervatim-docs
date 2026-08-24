@@ -19,3 +19,10 @@ private/
 # Docs de travail locales, non versionnees
 sprints-conformite-offre.md
 audit-etat-avancement.md
+
+# BMad Method — installation partagee dans C:\Apps\bmad, branchee par jonctions
+# Windows (voir C:\Apps\bmad\link-project.ps1). Rien de tout ceci n'est portable
+# d'une machine a l'autre : on relie, on ne versionne pas.
+/_bmad/
+/_bmad-output/
+/.claude/

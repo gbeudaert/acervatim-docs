@@ -1,7 +1,7 @@
 # Conventions transverses — règles non négociables
 
-> Résumé opérationnel des `CLAUDE.md` des deux dépôts. En cas de doute, lire l'original :
-> `acervatim-app/CLAUDE.md` · `acervatim-backend/CLAUDE.md`.
+> Résumé opérationnel des `AGENTS.md` des deux dépôts de code. En cas de doute, lire l'original :
+> `acervatim-app/AGENTS.md` · `acervatim-backend/AGENTS.md`.
 
 ## Privacy by design (backend — règle absolue)
 
