@@ -52,6 +52,8 @@
 | MAL, MyAnimeList (identité repli + pivot) | `be:oauth/providers/mal.adapter.ts` (+ `pkce.ts`) — `searchByBarcode` orchestre BnF → MangaDex → MAL |
 | TMDB | `be:oauth/providers/tmdb.adapter.ts` |
 | Recherche externe | `be:search/search.service.ts` · `app:data/remote/search/` |
+| Recherche **texte** Discogs, choisir le bon pressage | `be:oauth/providers/discogs.adapter.ts` (`mapSearchResult`) — cf. [recherche-textuelle-discogs.md](../backend/recherche-textuelle-discogs.md) |
+| Taux de hit du cache partagé, pression quota d'une source | `be:src/common/cache/api-cache.service.ts` (`stats()`) · `GET /v1/admin/queues` → `cache[]` |
 | Sync, WorkManager | `app:data/remote/sync/` (SyncManagerImpl, SyncWorker) |
 | Backup, export/import ZIP | `app:data/backup/` |
 | Couvertures, images | `app:data/local/storage/CoverStorageImpl.kt` · `app:ui/components/CoverPicker.kt` |
