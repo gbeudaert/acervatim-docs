@@ -10,7 +10,7 @@ quand on ajoute, dans sa propre collection quand on la parcourt.
 
 | # | Évolution | Où est le travail |
 |---|---|---|
-| 1 | [Recherche textuelle vers les bases externes](#1--recherche-textuelle-vers-les-bases-externes) | ~90 % app (le backend sait déjà le faire) |
+| 1 | [Recherche textuelle vers les bases externes](#1--recherche-textuelle-vers-les-bases-externes) | ✅ Livré — serveur (SD1) puis app (AD1), 2026-08-26 |
 | 2 | [Tris et filtres dans l'app](#2--tris-et-filtres-dans-lapp) | ✅ Livré — app (AD2), 2026-08-24 ; backend toujours différé (web) |
 | 3 | [Vue galerie](#3--vue-galerie) | ✅ Livré — serveur (SD3) puis app (AD3), 2026-08-24 |
 
@@ -37,11 +37,12 @@ fonctionnalité à **brancher** :
 - `DiscogsAdapter.search(query)` est implémenté (`runSearch({ q: query })`).
 - `AcervatimApi.search()` côté app expose **déjà** le paramètre `q`.
 
-**Ce qui manque est côté app :**
+**Ce qui manquait était côté app** (livré depuis par AD1) :
 
-- `ExternalSearchRepository` n'expose que `searchByBarcode()` — aucune méthode de recherche texte.
-- Le seul point d'entrée utilisateur est `BarcodeScanScreen` (caméra). Il n'existe aucun écran pour
-  taper un titre ou un artiste.
+- `ExternalSearchRepository` n'exposait que `searchByBarcode()` — aucune méthode de recherche texte.
+  Elle a désormais sa symétrique `searchByText()`, `q` **XOR** `barcode`.
+- Le seul point d'entrée utilisateur était `BarcodeScanScreen` (caméra). L'écran de saisie est
+  `ui/search/ExternalSearchScreen.kt`, route `search/external?collectionType=`.
 
 ### Le vrai problème de conception : choisir le bon pressage
 
@@ -49,17 +50,37 @@ Un code-barres identifie **une** édition. Un texte en renvoie des dizaines : Di
 souvent 30 pressages du même album (pays, année, label, format). Une liste de résultats qui
 n'affiche que « titre — artiste » est inutilisable : l'utilisateur ne peut pas choisir.
 
-C'est là que se situe le travail réel, et il est partagé :
-- **Backend** : garantir que la réponse porte de quoi discriminer (année, label, pays, format,
-  jaquette) et gérer la pagination des résultats.
-- **App** : une UI de sélection qui rend ces différences lisibles.
+C'est là que se situait le travail réel, et il était partagé :
+- **Backend** (SD1) : la réponse porte désormais de quoi discriminer — `catno`, `barcodes`,
+  `masterId` en plus de l'année, du label, du pays et du format ; pagination vérifiée de bout en bout.
+- **App** (AD1) : les résultats sont **regroupés par album** (`masterId`), et chaque pressage porte
+  sa ligne discriminante « année · label · pays · format · n° de catalogue ». Un album à pressage
+  unique se choisit d'un geste ; au-delà, le groupe se déplie — sans quoi l'app trancherait à la
+  place de l'utilisateur, ce qui est exactement le problème qu'on voulait résoudre.
+
+### Ce qui a été livré (AD1)
+
+- Point d'entrée dans la feuille d'ajout, **à côté du scan** : c'est là qu'on le cherche quand la
+  pochette n'a pas de code-barres. Vinyle seulement — le manga a son propre parcours par titre
+  (`edition-mapping`).
+- Saisie **debouncée** (400 ms, 3 caractères minimum) : en recherche texte le cache serveur est peu
+  efficace et une requête utilisateur vaut à peu près un appel Discogs (relevé SD1 : taux de hit
+  0,25 contre 0,67 au code-barres). Une requête par frappe viderait le quota sur des préfixes de
+  mots inachevés.
+- Le pressage retenu rejoint le formulaire par le **passe-plat du scan**, pas par un second parcours
+  d'ajout : deux chemins parallèles divergeraient à la première évolution.
+- Le formulaire récupère au passage le label, le pays et, quand le pressage le porte, son
+  code-barres — celui que la pochette n'affichait pas.
 
 ### Point d'attention — jetons
 
 `/v1/search` passe par la résolution de jetons (BYOT → repli premium → mode dégradé → 403
 `source-token-required`). Une recherche texte Discogs **exige un jeton** : un utilisateur connecté
-gratuit sans compte Discogs relié recevra un 403. L'UI doit le dire clairement et proposer l'action
-(connecter Discogs, ou passer premium), pas afficher « aucun résultat ».
+gratuit sans compte Discogs relié recevra un 403. Le refus est traduit dès la couche `data` en une
+cause que l'écran sait dire, avec l'action correspondante — **jamais** « aucun résultat », qui
+ferait croire que le disque n'est pas référencé. Réserve connue : l'app ne sait pas encore relier un
+compte Discogs (aucun parcours BYOT côté Android), l'action proposée est donc « voir mon compte »,
+c'est-à-dire le palier premium.
 
 ---
 
@@ -192,6 +213,12 @@ collection reste à mesurer sur appareil, il n'est pas prouvé ici.
   (`userData.playCount`), livré serveur (SD3) et app (AD3). L'historique reste écarté, pas oublié.
 - **Tri serveur** : différé au chantier web, mais le curseur composite est à concevoir à ce
   moment-là, pas à bricoler.
+- **Relier un compte Discogs depuis l'app** (évolution 1) : le backend sait le faire (BYOT), l'app
+  n'a aucun parcours OAuth de source. Tant qu'il manque, le refus de jeton ne peut proposer que le
+  palier premium — l'écran est prêt à router ailleurs, `provider` est déjà remonté du serveur.
+- **Pagination des résultats texte** (évolution 1) : le curseur est servi et vérifié côté SD1,
+  l'app s'arrête aux 25 premiers résultats. À rouvrir si l'usage montre que le bon pressage tombe
+  au-delà.
 
 ## Documents liés
 
@@ -200,4 +227,5 @@ collection reste à mesurer sur appareil, il n'est pas prouvé ici.
 | `acervatim-backend/docs/interne/sprints/decouverte/` | Sprints backend SD1→SD3 (gitignoré) |
 | `acervatim-app/docs/interne/sprints/decouverte/` | Sprints app AD1→AD3 (gitignoré) |
 | [spec-macro-partage-collection.md](spec-macro-partage-collection.md) | Chantier partage — `A1bis`/`S1bis` synchronisent `lastPlayedAt`, utile ici |
+| [agent/backend/recherche-textuelle-discogs.md](agent/backend/recherche-textuelle-discogs.md) | Charge utile d'un résultat texte, découpage artiste/titre, cache et quota mesurés (SD1) |
 | [agent/transverse/sources-externes.md](agent/transverse/sources-externes.md) | Résolution des jetons (BYOT / repli premium / dégradé) |

@@ -103,9 +103,13 @@ Le scan utilise la caméra et fonctionne **entièrement hors-ligne** (reconnaiss
 
 Pour le détail des sources interrogées, voir [D'où viennent les informations](sources-de-donnees.md).
 
-### Recherche Discogs (vinyle)
+### Rechercher un disque par son titre (vinyle)
 
-En renseignant un jeton d'accès personnel Discogs dans **Réglages → Comptes & sources**, vous pouvez rechercher un disque par texte ou par code-barres dans la base Discogs et importer sa fiche complète, jaquette comprise. Cette connexion est facultative : l'application est pleinement fonctionnelle sans.
+Tous les disques n’ont pas de code-barres — pressages indépendants, autoproductions. Depuis le menu **+ Ajouter**, **Rechercher par titre** interroge la base Discogs à partir d’un titre d’album, d’un nom d’artiste, ou des deux.
+
+Un même album y existe souvent en vingt ou trente pressages. Les résultats sont donc **regroupés par album** : touchez-en un pour déplier ses pressages, chacun annoncé par son année, son label, son pays, son format et son numéro de catalogue. Le pressage choisi ouvre la fiche pré-remplie, exactement comme après un scan — vous n’avez plus qu’à la compléter.
+
+Cette recherche passe par une source qui demande un accès : reliez votre compte Discogs dans **Réglages → Gérer les collections → Sources**, ou utilisez l’accès partagé inclus avec premium. Sans accès, l’application vous le dit et vous propose l’action — elle ne prétend jamais que le disque n’existe pas. La saisie manuelle, elle, reste disponible hors ligne.
 
 ## La fiche détail
 

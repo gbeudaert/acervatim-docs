@@ -60,8 +60,8 @@ Sous-dossiers : `model/auth/` (`AuthState`, `SignInCancelledException`), `model/
 ### Statistiques & suggestions
 `ObserveCollectionStatsUseCase` · `ObserveCollectionTypeStatsUseCase` · `ObserveDistinctGenresUseCase` · `ObserveArtistSuggestionsUseCase`
 
-### Scan & backup
-`LookupByBarcodeUseCase` (code-barres → recherche externe) · `ExportBackupUseCase` · `ImportBackupUseCase`
+### Recherche externe & backup
+`LookupByBarcodeUseCase` (code-barres → recherche externe) · `SearchExternalByTextUseCase` (titre/artiste → pressages regroupés par album ; court-circuite le réseau si la requête fait moins de 3 caractères ou si aucune session n'est ouverte) · `ExportBackupUseCase` · `ImportBackupUseCase`
 
 ## Points d'entrée
 

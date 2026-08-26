@@ -12,10 +12,11 @@
 | Route | Écran (composable) | ViewModel | Rôle |
 |---|---|---|---|
 | `collection` (start) | `ui/list/CollectionScreen.kt` | `ui/list/CollectionViewModel.kt` | Collection active, dans la densité choisie (liste / grille / galerie), à plat ou par séries |
-| `record/add?barcode=` | `ui/edit/AddEditRecordScreen.kt` | `ui/edit/AddEditRecordViewModel.kt` | Ajout d'un album (préremplissable par scan) |
+| `record/add?barcode=&prefillKey=` | `ui/edit/AddEditRecordScreen.kt` | `ui/edit/AddEditRecordViewModel.kt` | Ajout d'un album. Préremplissable par le scan (`barcode`) **ou** par la recherche par titre (`prefillKey` = `source:sourceId` du pressage retenu, un disque sans code-barres n'ayant pas de clé `barcode`) |
 | `record/{recordId}` | `ui/detail/RecordDetailScreen.kt` | `ui/detail/RecordDetailViewModel.kt` | Détail album |
 | `record/{recordId}/edit` | `ui/edit/AddEditRecordScreen.kt` | idem | Édition album |
 | `scan?collectionType=&seriesImport=&seriesId=` | `ui/scan/BarcodeScanScreen.kt` | `ui/scan/BarcodeScanViewModel.kt` | Scan code-barres (CameraX + ML Kit) |
+| `search/external?collectionType=` | `ui/search/ExternalSearchScreen.kt` | `ui/search/ExternalSearchViewModel.kt` | Recherche d'un disque par titre/artiste dans les bases externes — le chemin des pressages **sans code-barres**. Vinyle seulement : le manga passe par `edition-mapping` |
 | `series/import?barcode=` | `ui/series/SeriesImportScreen.kt` | `ui/series/SeriesImportViewModel.kt` | Import d'une série manga complète depuis un ISBN scanné |
 | `series/add?collectionType=` | `ui/series/AddEditSeriesScreen.kt` | `ui/series/AddEditSeriesViewModel.kt` | Création série |
 | `series/{seriesId}` | `ui/series/SeriesDetailScreen.kt` | `ui/series/SeriesDetailViewModel.kt` | Détail série (tomes possédés/wishlist) |
@@ -52,7 +53,7 @@
 | `ui/components/CoverPicker.kt` | Sélection/remplacement d'image de couverture |
 | `ui/components/ZoomableCover.kt` | Zoom plein écran de la couverture |
 | `ui/scan/BarcodeAnalyzer.kt` | Analyse ML Kit des frames caméra |
-| `ui/scan/ScanPrefillHandoff.kt` | Transfert du résultat de scan vers l'écran d'ajout (préremplissage) |
+| `ui/scan/ScanPrefillHandoff.kt` | Transfert d'un `ExternalMatch` vers l'écran d'ajout (préremplissage), depuis le scan **et** depuis la recherche par titre. Le nom garde sa dette d'origine : la clé n'est plus toujours un code-barres |
 | `ui/util/RelativeTime.kt` · `ui/util/SectionLetter.kt` | Helpers d'affichage (temps relatif, index alphabétique) |
 
 ## Thème

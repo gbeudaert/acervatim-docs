@@ -32,9 +32,11 @@
 | Fonctionnalité | UI | Logique / données |
 |---|---|---|
 | Scan code-barres (EAN/ISBN) | `ui/scan/BarcodeScanScreen.kt`, `BarcodeAnalyzer` (ML Kit), `BarcodeScanViewModel` | `LookupByBarcodeUseCase` → `ExternalSearchRepository` → backend `/v1/search?barcode=` |
-| Préremplissage du formulaire depuis un scan | `ui/scan/ScanPrefillHandoff.kt` | routes `record/add?barcode=`, `manga/add?barcode=` |
+| Préremplissage du formulaire depuis un scan ou une recherche | `ui/scan/ScanPrefillHandoff.kt` | routes `record/add?barcode=` / `?prefillKey=`, `manga/add?barcode=` |
 | Import d'une série manga complète (« toute la série d'un coup ») | `ui/series/SeriesImportScreen.kt`, `SeriesImportViewModel` | `ImportScannedSeriesUseCase`, `/v1/search/edition-mapping` (BnF), `domain/model/EditionMapping.kt` |
-| Recherche externe par texte | écrans d'ajout | `ExternalSearchRepositoryImpl`, `domain/model/ExternalMatch.kt` |
+| Recherche externe **par texte** (disque sans code-barres) | `ui/search/ExternalSearchScreen.kt`, `ExternalSearchViewModel` (saisie debouncée 400 ms) | `SearchExternalByTextUseCase` → `ExternalSearchRepository.searchByText` → `/v1/search?q=` ; résultats regroupés par `domain/model/PressingGroup.kt` |
+| Choisir le bon pressage | groupes dépliables, ligne discriminante année · label · pays · format · n° de catalogue | `ExternalMatch.masterId` regroupe, `catalogNumber`/`label`/`country` départagent — cf. [../backend/recherche-textuelle-discogs.md](../backend/recherche-textuelle-discogs.md) |
+| Refus de jeton de source (`403 source-token-required`) | message actionnable + « Voir mon compte », **jamais** « aucun résultat » | traduit dès `data/remote/search/` en `domain/model/ExternalSearchFailure.kt` |
 
 ## État utilisateur sur les items
 
