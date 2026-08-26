@@ -55,6 +55,8 @@
 | Recherche **texte** Discogs, choisir le bon pressage | `be:oauth/providers/discogs.adapter.ts` (`mapSearchResult`) — cf. [recherche-textuelle-discogs.md](../backend/recherche-textuelle-discogs.md) |
 | Ajouter un disque **sans code-barres** (recherche par titre) | `app:ui/search/` · `app:domain/usecase/SearchExternalByTextUseCase.kt` · `app:domain/model/PressingGroup.kt` (regroupement par `masterId`) |
 | Erreur de recherche externe rendue actionnable (403 jeton, réseau, 429) | `app:domain/model/ExternalSearchFailure.kt` — traduite dans `app:data/remote/search/ExternalSearchRepositoryImpl.kt` |
+| Ajouter une **série manga** sans en posséder un tome (recherche par titre) | Chantier non démarré — cadrage dans [spec-macro-import-serie-manga.md](../../spec-macro-import-serie-manga.md) |
+| Éditions d'une série (standard / colossale), mention `205$a` | `be:common/sources/bnf/bnf.service.ts` (`enumerateEdition`, filtre `rec205`) · `app:domain/model/MangaExtras.kt` (`KEY_EDITION`) |
 | Taux de hit du cache partagé, pression quota d'une source | `be:src/common/cache/api-cache.service.ts` (`stats()`) · `GET /v1/admin/queues` → `cache[]` |
 | Sync, WorkManager | `app:data/remote/sync/` (SyncManagerImpl, SyncWorker) |
 | Backup, export/import ZIP | `app:data/backup/` |

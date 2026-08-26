@@ -37,6 +37,7 @@ exclude:
   - spec-macro-partage-collection.md
   - spec-macro-recherche-tris-galerie.md
   - spec-macro-export-sources-externes.md
+  - spec-macro-import-serie-manga.md
   - spec-repli-google-books-pivot.md
   - private/
   - vendor/
