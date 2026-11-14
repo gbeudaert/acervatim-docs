@@ -1,9 +1,11 @@
 # Cible — Découpage micro-services (un service par type de collection + partages)
 
 > Remonter : [INDEX.md](INDEX.md) · **Cible d'architecture non engagée** — document de travail, pas
-> une page du site public. Aucun code n'est écrit à ce jour.
-> Dernière mise à jour : 2026-08-24. État du dépôt : monolithe NestJS mono-processus, un seul schéma
-> Prisma. Rien de ce qui suit n'est implémenté.
+> une page du site public.
+> Dernière mise à jour : 2026-11-03. État : le monolithe `acervatim-backend` reste ce qui tourne ;
+> une implémentation de cette cible existe dans le dépôt local `acervatim/backend-services`
+> (versionné depuis le 2026-11-02, jamais poussé ni déployé). Ce document décrit la cible, pas
+> l'état de ce dépôt.
 
 ## TL;DR
 
@@ -217,6 +219,12 @@ Même traitement pour toute future route de lecture inter-types.
 - `search` est **déjà** un sous-système autonome : files BullMQ, `api_cache`, adapters. Il ne lit
   aucune table du domaine collection. Son extraction (M4) est quasi sans couture — c'est pourquoi
   elle sert de validation à faible risque du transport interne.
+  **Exception depuis le rattrapage manga (SD3, 2026-11)** : le passage hebdomadaire et
+  `GET /v1/series-updates` lisent les séries et les tomes possédés. Dans le monolithe, c'est une
+  lecture Prisma directe de `collection_nodes`/`items` ; découpé, c'est
+  `GET /internal/nodes` et `GET /internal/users/:id/nodes` sur `catalog-manga`, plus
+  `GET /internal/premium/:id` sur `billing` (§6). L'état conservé par `search` reste indexé par
+  édition, jamais par compte.
 - `connections` (oauth) idem : `oauth_credentials` n'est lue que par lui et par `TokenResolverService`.
 
 ---
@@ -236,6 +244,15 @@ Même traitement pour toute future route de lecture inter-types.
 **M1 est le jalon qui compte.** L'essentiel du risque architectural — l'inversion sharing↔catalog,
 la disparition des jointures, la saga RGPD — y tombe pour un coût opérationnel nul. Un projet qui
 s'arrêterait à M2 aurait déjà gagné la partie difficile.
+
+**Reprise des données (2026-11-03).** Dans ce phasage, les données suivent les schémas : M2
+sépare les tables sur place, M6 déplace les collections vers leur catalog. L'implémentation de
+`acervatim/backend-services`, passée directement de M0 à M6, démarre au contraire sur neuf
+schémas vides : la bascule exige une reprise ponctuelle du schéma du monolithe, écritures
+gelées, avec les mêmes secrets — `acervatim/backend-services/db/reprise/` (procédure, contrôles,
+retour arrière ; répétée en développement, jamais sur un vidage de production). Son point de
+non-retour est la première écriture sur la constellation : il n'existe pas de reprise en sens
+inverse.
 
 **Critères de passage**, à mesurer et non à supposer, avant chaque palier à partir de M3 :
 
@@ -276,8 +293,10 @@ route ajoutée ici est un engagement ; toute donnée qui n'y passe pas n'est pas
 | `GET /internal/registry/rebuild` | `gateway` | job de réparation | Re-scan des catalogs — §3.3 |
 | `DELETE /internal/users/:id/data` | tous | `identity` | Participant de la saga RGPD, idempotent — §3.4 |
 | `GET /internal/users/:id/export` | tous | `identity` | Fragment d'export RGPD — §3.4 |
-| `GET /internal/premium/:userId` | `billing` | `gateway`, `sharing` | `{ premium: bool, source }` — §3.6 |
+| `GET /internal/premium/:userId` | `billing` | `gateway`, `sharing`, `search` | `{ premium: bool, source }` — §3.6. `search` : rattrapage manga, une fois par compte et par passage |
 | `GET /internal/token/:userId/:provider` | `connections` | `search` | Résolution BYOT → repli premium → dégradé |
+| `GET /internal/nodes?typeCode&level&cursor&limit` | `catalog-*` | `search` | Re-scan paginé des nœuds d'un type et d'un niveau, tous comptes — rattrapage hebdomadaire des tomes manga (ajout 2026-11-02) |
+| `GET /internal/users/:id/nodes?typeCode&level` | `catalog-*` | `search` | Nœuds d'un compte + volumes déjà présents — `GET /v1/series-updates` (ajout 2026-11-02) |
 
 Toutes protégées par le **principal signé** (§3.6) ou un secret de service à service ; **aucune
 n'est exposée par le gateway** vers l'extérieur.
