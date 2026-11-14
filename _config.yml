@@ -39,6 +39,9 @@ exclude:
   - spec-macro-export-sources-externes.md
   - spec-macro-import-serie-manga.md
   - spec-repli-google-books-pivot.md
+  - audit-limitations-recherche-manga.md
+  - etude-leviers-recherche-manga.md
+  - dossier-jeux-de-societe-bgg-gameupc.md
   - private/
   - vendor/
   - Gemfile
