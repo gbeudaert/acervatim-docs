@@ -7,7 +7,7 @@
 
 | Interface | Rôle |
 |---|---|
-| `data/remote/api/AcervatimApi.kt` | **Toute l'API métier** `/v1/*` (JWT requis) : me, collections, items, nodes, search, edition-mapping, oauth, subscriptions, invitations. Chaque méthode est annotée avec le § de la spec mobile. |
+| `data/remote/api/AcervatimApi.kt` | **Toute l'API métier** `/v1/*` (JWT requis) : me, collections, items, nodes, search, edition-mapping, search/editions, import-jobs, series-updates, oauth, subscriptions, invitations. Chaque méthode est annotée avec le § de la spec mobile. |
 | `data/remote/api/AuthApi.kt` | `/v1/auth/google` (échange idToken Google → JWT backend), hors intercepteur auth |
 
 ## Intercepteurs & erreurs
@@ -74,6 +74,20 @@ Modèles : `domain/model/sharing/SharingModels.kt` (gestion) et `SharedBrowsing.
 ## Recherche externe (`data/remote/search/`)
 
 `ExternalSearchRepositoryImpl.kt` — implémente `ExternalSearchRepository` : appelle `GET /v1/search` (texte ou code-barres, XOR) et `GET /v1/search/edition-mapping` (énumération d'une édition manga via BnF). Résultats mappés vers `domain/model/ExternalMatch.kt` / `EditionMapping.kt`.
+
+Ajouts AD2 (branche `feat/manga-recherche-serie`), tous mappés vers des modèles domaine neutres :
+
+| Méthode | Endpoint | Modèle |
+|---|---|---|
+| `searchMangaSeries(query)` | `GET /v1/search?type=manga&q=` | `SeriesCandidate` (`domain/model/SeriesSearch.kt`) ; `mangaId` gardé seulement s'il est un UUID — sinon `null`, ce qui évite le `400` de `search/editions` sur un candidat venu du repli MAL |
+| `listEditions(mangaId, title?)` | `GET /v1/search/editions` | `SeriesEditionOption` ; `publisher` peut être `null` (affiché « Éditeur inconnu ») |
+| `editionMapping(titleFr, edition, publisher?, mangaId?, since?)` | `GET /v1/search/edition-mapping` | `EditionMapping` (+ `publisher` retenu, `complete` — vrai si absent —, `EditionTome.noticeCreatedAt`) ; `since` envoyé en `AAAAMMJJ` |
+| `startImportJob(titleFr, edition, publisher?, mangaId?)` | `POST /v1/search/import-jobs` | `ImportJob` |
+| `seriesUpdates()` | `GET /v1/series-updates` | `SeriesUpdate` ; hors premium (`402`), échec `ExternalSearchFailure.UNKNOWN`, ignoré par le rattrapage. Lu via `domain/usecase/SeriesUpdatesCache.kt` : un téléchargement au plus toutes les **10 min par compte** (le job serveur est hebdomadaire) |
+
+Le scan transmet désormais `ExternalMatch.publisherFr` et `ExternalMatch.mangaId` (lu dans
+`metadata.pivot`) à `edition-mapping` et `import-jobs` : sans éditeur, le serveur retient l'éditeur
+dominant.
 
 ## Sync (`data/remote/sync/`)
 
@@ -178,9 +192,14 @@ Ce qu'il faut en retenir côté app :
 - Poussé depuis **A1** : `status` (`userData`). Depuis **A1bis** : `rating`, `purchasePrice`,
   `lastPlayedAt` (`userData`) ; `recordingSpeed`, `country` et les extras manga `publisherFr`,
   `pageCount`, `sourceVolumeRange` (`unifiedData`).
+- Depuis **AD2** (branche `feat/manga-recherche-serie`) : `edition` sur l'item
+  (`unifiedData.edition`, `MangaItemSchema`) et `edition` / `publisherFr` / `mangaId` sur le nœud
+  série, aller et retour (`FacadeMapper.seriesToRemote()` / `remoteToSeries()`, `NodeDto`,
+  `UnifiedDataDto`). **Ordre de déploiement** : `MangaItemSchema` est `.strict()` — un serveur sans
+  SD2 rejette en `400` tout tome manga portant `edition` : le backend part **avant** l'app.
 - **Volontairement local** : `coverPath` (photo de l'utilisateur — le serveur ne stocke aucune
-  image), `extras.edition` et `extras.tomeSynopsis` (pas de home serveur ; `tomeSynopsis` n'est
-  **pas** `userData.note`, qui est une note privée saisie, pas un synopsis provider).
+  image) et `extras.tomeSynopsis` (pas de home serveur ; `tomeSynopsis` n'est **pas**
+  `userData.note`, qui est une note privée saisie, pas un synopsis provider).
 - **Modélisé serveur, pas consommé par l'app** (🔸) : `userData.note` d'item, et tout le niveau
   série (jaquette distante, `rating` MAL, `demographic`, note/commentaire, `isWishlist`).
 

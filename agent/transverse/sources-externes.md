@@ -8,11 +8,13 @@
 | Provider | Type de collection | Auth (jeton résolu, cf. §Résolution des jetons) | Usage |
 |---|---|---|---|
 | **Discogs** | vinyl | BYOT OAuth 1.0a (compte user) → repli premium : personal token Acervatim (`DISCOGS_ACERVATIM_TOKEN`) | Recherche texte + barcode (`database/search?barcode=`), métadonnées albums |
-| **MangaDex** (**principal manga**) | manga | Aucune (API publique) | **Identité série** : synopsis **FR**, note, statut, nb tomes, genres, **jaquettes par tome**, `links.mal` / `links.al`. Source nominale du scan (nœud série `source='mangadex'`) |
-| **MyAnimeList (MAL)** (repli) | manga | BYOT OAuth2 PKCE (compte user) → repli premium : `X-MAL-CLIENT-ID` (`MAL_CLIENT_ID`) | **Repli d'identité** si MangaDex n'identifie pas ; joignable par id via `links.mal` (sync bibliothèque). Recherche texte manga |
+| **MangaDex** (**principal manga**) | manga | Aucune (API publique) | **Identité série** : synopsis **FR**, note, statut, nb tomes, genres, **jaquettes par tome**, `links.mal` / `links.al`. Source nominale du scan (nœud série `source='mangadex'`) **et de la recherche texte de séries** (`GET /v1/search?type=manga&q=`, sans jeton) |
+| **MyAnimeList (MAL)** (repli) | manga | BYOT OAuth2 PKCE (compte user) → repli premium : `X-MAL-CLIENT-ID` (`MAL_CLIENT_ID`) | **Repli d'identité** si MangaDex n'identifie pas ; joignable par id via `links.mal` (sync bibliothèque). **Repli** de la recherche texte manga : MangaDex sans résultat et jeton MAL résolu, ou MangaDex indisponible |
 | **Google Books** | manga (livre) | Clé API optionnelle (`GOOGLE_BOOKS_API_KEY`) | **Repli jaquette par ISBN/tome** (quand MangaDex n'a pas le visuel du tome) ; expose aussi `description` (résumé par édition) et le **titre par ISBN** (job `volume-info`), maillon d'entrée du repli quand la BnF ignore l'ISBN |
 | **TMDB** | movie | BYOT clé API perso (`PUT /v1/sources/tmdb/token`, pas d'OAuth) → repli premium : clé serveur (`TMDB_API_KEY`) | Recherche + détails films |
-| **BnF (SRU, sans auth)** | manga | Aucune (API publique) | Pivot **ISBN → série/tome FR** (titre romaji, auteur, édition) ; énumération des tomes d'une édition (`edition-mapping`) |
+| **GameUPC** | jeu de société | Clé serveur `x-api-key` (`GAMEUPC_API_KEY`) ; votes sous pseudonyme (`GAMEUPC_VOTER_PEPPER`) | **Code-barres → id BGG** (communautaire) ; les choix des utilisateurs lui sont renvoyés. Dépôt local `backend-services/search` : [../backend/gameupc-bgg.md](../backend/gameupc-bgg.md) |
+| **BoardGameGeek** (XML API2) | jeu de société | Jeton Bearer d'application (`BGG_API_TOKEN`), **vide tant que la licence BGG n'est pas accordée** (non commerciale d'abord, commerciale avant le premium) ; **pas de BYOT** (BGG interdit de faire obtenir un jeton à l'utilisateur final) | Fiche `thing` d'un jeu ; ≤ 1 req / 2 s, `boardgamegeek.com` sans `www`, logo « Powered by BGG » dans l'app |
+| **BnF (SRU, sans auth)** | manga | Aucune (API publique) | Pivot **ISBN → série/tome FR** (titre romaji, auteur, édition) ; énumération des tomes d'une édition (`edition-mapping`) ; **liste des éditions FR** d'une série (`search/editions`) ; **rattrapage** des tomes catalogués depuis une date (`since`) |
 
 ## Architecture côté backend
 
@@ -60,6 +62,46 @@ Déclenché par le **seul** `bnf_not_found` (nouveauté non cataloguée, éditeu
 - 🛡️ **Un seul garde-fou**, non linguistique : ne tronquer que si la queue retirée **contient un chiffre**. Aucune liste de mots (« Tome », « T. »…) — sans le garde-chiffre, `Instinct grégaire` → `Instinct` matcherait une autre série.
 - ⚖️ **`MangaDexIdentity.ambiguous`** (un autre candidat à égalité de `titleScore`) : ignoré par le chemin nominal (l'auteur BnF tranche), **rejette** côté repli quand aucun auteur n'a matché — c'est ce qui écarte *Frieren Cinnamoroll Kamigata*. Calculé **toujours** et porté par l'identité cachée (clé `mangadex:identify:v2:` — pas de paramètre de mode, qui empoisonnerait le cache partagé entre les deux chemins).
 - 📈 Taux mesuré : **98/137 (~72 %)**, ~84 % hors coffrets/goodies et ISBN absents de Google.
+
+## Recherche d'une série par titre (SD1 · SD3)
+
+Implémentée le 2026-11-02 sur les branches `feat/manga-recherche-serie` (non fusionnées). Mesures et
+sources : [../../etude-leviers-recherche-manga.md](../../etude-leviers-recherche-manga.md) ;
+décisions : [../../spec-macro-import-serie-manga.md](../../spec-macro-import-serie-manga.md).
+
+```
+saisie → GET /v1/search?type=manga&q=   MangaDex, sans jeton (tri par suivis, doujinshi/anthologies/
+       │                                 colorisés exclus) → candidats { mangaId, titleFr, titleRomaji… }
+       ▼ choix du candidat
+         GET /v1/search/editions?mangaId=  identité MangaDex relue par id → BnF texte imprimé →
+       │                                 une ligne par (série, éditeur, 205$a)
+       ▼ choix de l'édition
+         POST /v1/search/import-jobs { title, edition, publisher, mangaId } → edition-mapping
+```
+
+- **MAL en repli seulement**, en **première page** et sur une seule page (`nextCursor: null`) :
+  MangaDex a répondu sans résultat **et** un jeton MAL est résolu (sinon liste vide, jamais de 403),
+  ou MangaDex est indisponible (chemin MAL historique).
+- **Énumération corrigée** (`common/sources/bnf/edition-records.ts`) : une édition = **(éditeur
+  normalisé, `205$a`)**. Un `publisher` explicite filtre strictement ; sans lui, l'éditeur
+  **dominant** ne gagne que les **collisions** de n° (les 2-en-1 France Loisirs ne remplacent plus les
+  tomes Pika ; un n° que seul un libellé voisin porte comble le trou). Appartenance d'une notice :
+  **`461$t` fait autorité** quand il existe ; sans `461`, **l'un des** `500$a`, `200$a`, `225$a` égal
+  à la clé de série — ce qui garde les **pré-notices** des tomes récents (leur `225$a` est la
+  collection de l'éditeur, « Shonen manga »). Auteurs lus aussi en `702` (traducteurs exclus) ;
+  pré-notice sans `205` dont le titre porte un mot-clé d'art **hors des mots du titre de série** →
+  pas rangée en standard (*Perfect World* reste standard) ; requête filtrée `bib.doctype any "a"` ;
+  page vide cachée 24 h. `search/editions` renvoie `complete`, un `publisher` éventuellement `null`,
+  et `502` si aucune notice n'a pu être lue.
+- **Rattrapage** : `edition-mapping?since=AAAAMMJJ` (`bib.creationdate`). Délai mesuré entre sortie et
+  notice : 3-4 semaines chez les grands éditeurs, ~3 mois hors de France. Côté serveur, file
+  `edition-watch` hebdomadaire sur les séries synchronisées des comptes premium →
+  `GET /v1/series-updates` (cf. [../backend/scan-asynchrone-bullmq.md](../backend/scan-asynchrone-bullmq.md)
+  § 4ter) ; côté app, vérification à l'ouverture d'une série (cf.
+  [../app/ecrans-et-navigation.md](../app/ecrans-et-navigation.md)).
+- **Licence** : la politique d'usage MangaDex interdit les « paid services » — exception écrite à
+  obtenir avant le lancement du palier payant ; l'app crédite désormais MangaDex (écran de recherche,
+  sources de « Gérer les collections »).
 
 ## Jaquettes par tome (MangaDex → Google Books)
 

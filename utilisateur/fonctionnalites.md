@@ -24,6 +24,8 @@ Acervatim est en pré-alpha : l'application n'est pas encore publiée sur le Pla
 - **Publication Play Store v1.0** : la version 100 % hors-ligne (vinyle + manga), sans compte ni achat intégré.
 - **Activation du mode connecté dans l'application** : connexion Google et recherche dans les bases externes avec **vos propres jetons d'accès** (*bring your own token*). À ce palier, vos collections restent sur l'appareil — la synchronisation cloud relève du palier premium (voir « Moyen terme »). La couche technique est en place côté app et côté serveur ; il reste la configuration de production et la gestion des jetons par source.
 - **Enrichissement automatique au scan** : recherche dans les bases externes (via le serveur) pour pré-remplir titre, artiste/auteur, jaquette et métadonnées — par code-barres pour le vinyle (Discogs) et **par ISBN pour le manga** (pivot **BnF → MangaDex**, MyAnimeList en secours, qui retrouve la série et le tome scanné avec un synopsis souvent en français, éditions spéciales comprises — voir [D'où viennent les informations](sources-de-donnees.md)). Aujourd'hui le scan ne fait que pré-remplir le code-barres ; cet enrichissement reste à brancher dans l'app publiée.
+- **Ajouter une série manga par son titre**, sans en posséder un tome : vous tapez le titre (français ou original), choisissez la série puis son **édition française** (éditeur, édition standard, colossale, perfect…), et tous ses tomes rejoignent votre wishlist. Développé, pas encore publié — voir [D'où viennent les informations](sources-de-donnees.md#ajouter-une-serie-par-son-titre).
+- **Nouveaux tomes signalés** pour les séries en cours : à l'ouverture d'une série, l'application vous propose les tomes parus depuis votre dernier passage, que vous ajoutez à la wishlist d'un geste. Ils apparaissent **quelques semaines après leur sortie**, le temps que la Bibliothèque nationale de France les catalogue. Développé, pas encore publié.
 
 ## Moyen terme
 
@@ -33,7 +35,7 @@ Acervatim est en pré-alpha : l'application n'est pas encore publiée sur le Pla
 
 ## Plus tard
 
-- Alerte « nouveau tome disponible » et vue des tomes manquants pour les séries suivies.
+- Notification « nouveau tome disponible » hors de l'application et vue des tomes manquants pour les séries suivies (le signalement à l'ouverture d'une série est en « Court terme »).
 - Statistiques de collection (valeur, répartition par genre, habitudes d'écoute).
 - Montée en charge du serveur si l'usage le justifie — le schéma de données est prêt pour ce scénario.
 

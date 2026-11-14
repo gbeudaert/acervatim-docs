@@ -19,7 +19,7 @@ Cette page explique **quelles sources** sont utilisées et **ce que ça implique
 | Type | Source(s) | Ce qu'on y trouve |
 |---|---|---|
 | **Vinyles / disques** | [Discogs](https://www.discogs.com) | Album, artiste(s), année, pochette, label — recherche par texte **ou par code-barres** (EAN). |
-| **Mangas** | [MangaDex](https://mangadex.org) + [Bibliothèque nationale de France (BnF)](https://catalogue.bnf.fr), avec [MyAnimeList](https://myanimelist.net) et [Google Books](https://books.google.com) en secours | L'**œuvre** (synopsis **en français**, note, genres, nombre de tomes, jaquettes) côté MangaDex ; l'**édition française** (éditeur, tome, ISBN) côté BnF ; MyAnimeList prend le relais si MangaDex ne reconnaît pas la série, Google Books complète les jaquettes manquantes — recherche **par ISBN**. |
+| **Mangas** | [MangaDex](https://mangadex.org) + [Bibliothèque nationale de France (BnF)](https://catalogue.bnf.fr), avec [MyAnimeList](https://myanimelist.net) et [Google Books](https://books.google.com) en secours | L'**œuvre** (synopsis **en français**, note, genres, nombre de tomes, jaquettes) côté MangaDex ; l'**édition française** (éditeur, tome, ISBN) côté BnF ; MyAnimeList prend le relais si MangaDex ne reconnaît pas la série, Google Books complète les jaquettes manquantes — recherche **par ISBN** ou **par titre**. |
 | **Films** | [TMDB](https://www.themoviedb.org) | Titre, affiche, année, synopsis. |
 
 > L'enrichissement est **optionnel** et **à votre initiative** : l'application reste pleinement
@@ -74,6 +74,28 @@ traduits). Vous pouvez toujours le **modifier** après coup.
 > Selon les ouvrages, l'information peut être partielle (séries en cours de publication, petits
 > éditeurs, catalogage incomplet). Dans ce cas, l'application pré-remplit ce qu'elle a trouvé et vous
 > complétez le reste — rien n'est jamais imposé.
+
+## Ajouter une série par son titre {#ajouter-une-serie-par-son-titre}
+
+Pas besoin de posséder un tome pour ajouter une série — c'est tout l'intérêt d'une wishlist.
+*Fonctionnalité développée, pas encore publiée.*
+
+1. **Vous tapez le titre**, en français ou dans sa version originale (« L'Attaque des Titans »
+   comme « Shingeki no Kyojin »). La recherche passe par **MangaDex**, sans compte à relier.
+2. **Vous choisissez la série** parmi les résultats, chacun avec sa jaquette, ses auteurs et son
+   année : c'est vous qui tranchez entre deux séries au nom proche.
+3. **Vous choisissez l'édition française**, d'après la BnF : éditeur, édition standard, colossale,
+   perfect…, avec son nombre de tomes. Deux éditions d'une même série restent deux séries distinctes
+   dans votre collection.
+4. Tous les tomes de l'édition rejoignent votre **wishlist**. Si la série est introuvable, vous
+   pouvez la créer à la main, déjà pré-remplie.
+
+### Les nouveaux tomes d'une série en cours
+
+Quand vous ouvrez une série encore en cours de parution, Acervatim vérifie (au plus une fois par
+semaine) si de nouveaux tomes ont paru et vous propose de les ajouter à la wishlist — sans rien
+ajouter d'office. Ces tomes apparaissent **quelques semaines après leur sortie** : c'est le temps
+qu'il faut à la BnF pour les cataloguer après le dépôt légal.
 
 ## Et votre vie privée ?
 

@@ -40,7 +40,7 @@ ui/  (Compose + ViewModel)  →  domain/ (modèles, interfaces, use cases)  ← 
 
 ## Modèles domaine (`domain/model/`)
 
-Principaux : `Record` (item générique), `Series` / `SeriesWithCounts`, `Artist` / `RecordArtistEntry`, `CollectionType`, `RecordFilter` (filtres liste) et `RecordSort` (tri : champ + sens, **à côté** du filtre), `ItemStatus` (owned/wishlist…), `ListMode` (hiérarchie) et `DisplayMode` (densité : liste/grille/galerie, axe orthogonal), `AcervatimFormat`, `RecordingSpeed` (vinyle), `MangaExtras` / `MangaDemographic` / `EditionMapping` / `Isbn` (manga), `ExternalMatch` (résultat recherche externe).
+Principaux : `Record` (item générique), `Series` / `SeriesWithCounts`, `Artist` / `RecordArtistEntry`, `CollectionType`, `RecordFilter` (filtres liste) et `RecordSort` (tri : champ + sens, **à côté** du filtre), `ItemStatus` (owned/wishlist…), `ListMode` (hiérarchie) et `DisplayMode` (densité : liste/grille/galerie, axe orthogonal), `AcervatimFormat`, `RecordingSpeed` (vinyle), `MangaExtras` / `MangaDemographic` / `EditionMapping` / `Isbn` (manga), `EditionKey` (clé d'édition : éditeur + mention normalisés), `SeriesCandidate` / `SeriesEditionOption` / `SeriesUpdate` (recherche de série par titre, `SeriesSearch.kt`), `SeriesCatchUpState` et règles pures du rattrapage (`SeriesCatchUp.kt`), `ExternalMatch` (résultat recherche externe).
 Sous-dossiers : `model/auth/` (`AuthState`, `SignInCancelledException`), `model/account/` (`AccountModels`), `model/sync/` (`RemoteModels`, `SyncState`, `SyncStatus`).
 
 ## Use cases (`domain/usecase/`) — catalogue par thème
@@ -52,7 +52,7 @@ Sous-dossiers : `model/auth/` (`AuthState`, `SignInCancelledException`), `model/
 `UpdateRatingUseCase` · `MarkAsPlayedUseCase` (horodate **et** incrémente `playCount`) · `ResetLastPlayedUseCase` (efface les deux) · `ToggleWishlistUseCase` · `UpdateItemStatusUseCase`
 
 ### Séries manga
-`UpsertSeriesUseCase` · `DeleteSeriesUseCase` · `ObserveSeriesByIdUseCase` · `ObserveSeriesItemsUseCase` · `ObserveSeriesWithCountsUseCase` · `ObserveSeriesByCollectionTypeUseCase` · `ImportScannedSeriesUseCase` (import d'une série complète depuis un scan)
+`UpsertSeriesUseCase` · `DeleteSeriesUseCase` · `ObserveSeriesByIdUseCase` · `ObserveSeriesItemsUseCase` · `ObserveSeriesWithCountsUseCase` · `ObserveSeriesByCollectionTypeUseCase` · `ImportScannedSeriesUseCase` (import d'une série complète depuis un scan ; `importFromSearch` depuis la recherche par titre ; `importNewTomes` pour le rattrapage) · `SearchMangaSeriesUseCase` · `WarmEditionImportUseCase` (job d'import serveur + polling, partagé scan/recherche) · `SeriesCatchUpUseCase` (nouveaux tomes d'une série en cours ; nouveautés premium via `SeriesUpdatesCache`, 10 min par compte) · `ClearSeriesCatchUpUseCase` (purge de l'état de rattrapage à la déconnexion / suppression de compte). Fin de parution : `isFinishedStatus` (`domain/model/Series.kt`), partagé par le rattrapage (`Series.isPublicationFinished`) et la synchro (`FacadeMapper`, statut `finished` du nœud)
 
 ### Types de collection & réglages
 `ObserveActiveCollectionTypeUseCase` · `SetActiveCollectionTypeUseCase` · `CollectionTypeVisibilityUseCases` · `ListModeForCollectionTypeUseCases` · `DisplayModeForCollectionTypeUseCases` · `SortForCollectionTypeUseCases` · `ObserveDuplicateAlbumsSettingUseCase`

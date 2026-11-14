@@ -42,7 +42,7 @@ Analyse du log `acervatim-backend/logs/prod_0.5.3.log` :
 | Éligibilité | Tout le monde connecté ; on garde l'**identité du demandeur** pour résoudre **son** token (BYOT) ; sans token → règles actuelles (repli premium → dégradé → `403`). Token résolu **dans le worker**, **jamais stocké dans Redis** |
 | Dédup inter-user + cache | **Cache indépendant des clés** : si l'info est en cache pour un user, on la sert à un autre **sans rappel**. On ne fait **jamais** d'appel avec le token d'autrui — on mutualise seulement les **réponses** (endpoints publics). Seuls les demandeurs **token-capables** enfilent un job ; token-less = cache-only sinon `403` |
 | Cache | **Seules les réponses 2xx** sont mises en cache (un `200`-vide = absence légitime, cacheable ; `4xx/429/5xx` jamais → re-tentable) |
-| Files | **Une file par source** (`gbooks`, `bnf`, `mal`, `discogs`, `tmdb`, `mangadex`), **sans split byot/shared** pour l'instant (le limiter protège le credential partagé ; les BYOT héritent de la même borne — rouvrable). La file `mangadex` (`concurrency:1`, `limiter 4/s`) porte **deux jobs** discriminés par `job.name` : `series-covers` (jaquettes) et `identify` (pivot d'identité) |
+| Files | **Une file par source** (`gbooks`, `bnf`, `mal`, `discogs`, `tmdb`, `mangadex`), **sans split byot/shared** pour l'instant (le limiter protège le credential partagé ; les BYOT héritent de la même borne — rouvrable). La file `mangadex` (`concurrency:1`, `limiter 4/s`) porte **quatre jobs** discriminés par `job.name` : `series-covers` (jaquettes), `identify` (pivot d'identité), `search` (recherche texte de séries, cache `mangadex:search:v1:<requête normalisée>:<offset>:<limit>`, famille `mangadex:search`, HIT 24 h / MISS 6 h) et `series` (lecture d'une série par id, pour `GET /v1/search/editions`) — ces deux derniers depuis SD1 (branche `feat/manga-recherche-serie`). **Priorités** (`mangadex.types.ts`) : `search`, `series` et `identify` en `MANGADEX_PRIORITY_INTERACTIVE` (1), jaquettes `series-covers` en `MANGADEX_PRIORITY_BACKGROUND` (10) — une saisie n'attend pas derrière le réchauffage d'une série |
 | Throttle DB | `TokenBucketService` + modèle `RateLimitBucket` **supprimés** (remplacés par les limiters BullMQ) — migration de drop `20260708120000_drop_rate_limit_buckets` |
 | Interactif vs série | **Séparés** par **priorité BullMQ** (interactif `priority:1`, série `priority:10`) + `queue:bnf` en `concurrency:2` (seul point de contention : lookup ISBN vs énumération ; la priorité ne préempte pas un job en cours) |
 | Redis down | **`503` propre immédiat** sur le chemin interactif (circuit-breaker `RedisHealthService`, `a712cf7` — pas d'attente des ~15 s de `waitUntilFinished`, pas de repli appel-direct). Sur le chemin best-effort (jaquettes), on dégrade en `null` tout de suite |
@@ -132,6 +132,32 @@ Fire-and-poll de l'import « série complète », dans `src/search/import/` :
 - **Validation** : build OK ; **21 specs** `src/search` (service, processor, search.service) ; **E2E
   contre un vrai Redis** `edition-import.e2e.spec.ts` **2/2** (cycle enqueue→worker→progression→done ;
   dédup deux demandes identiques → un seul job).
+- **SD1 (2026-11-02, branche `feat/manga-recherche-serie`)** : le corps accepte `publisher` (et
+  `mangaId`, `malId`) ; l'éditeur normalisé entre dans l'id déterministe (`editionImportJobId`,
+  `edition-import.types.ts`) et descend jusqu'à l'énumération.
+
+## 4ter. Rattrapage des éditions suivies — file `edition-watch` (SD3)
+
+Implémenté le 2026-11-02 sur la branche `feat/manga-recherche-serie` (non fusionnée), dans
+`src/search/watch/` :
+- **Planification BullMQ, pas `@Cron`** : `upsertJobScheduler` (`edition-watch-weekly`, motif
+  `0 4 * * 1` — lundi 04:00) produit **un** job par échéance, qu'un seul worker consomme ;
+  `setGlobalConcurrency(1)` empêche un passage manuel de chevaucher le passage planifié. Un `@Cron`
+  tournerait dans chaque instance (double écriture d'état, requêtes BnF doublées). La planification
+  n'est pas attendue au boot (Redis indisponible ne bloque pas le démarrage) et est sautée en test.
+- **Sélection** : nœuds manga dont le propriétaire est premium, `status != 'finished'`, avec `title`
+  **et** `publisherFr` dans l'`unifiedData` ; dédup par (titre, éditeur, édition) normalisés.
+- **Passage** : `SearchService.editionMapping(…, { publisher, since })` par édition — aucune requête
+  SRU écrite à la main. `since` = dernière vérification − 7 j (première fois : maintenant − 60 j).
+  Un échec sur une édition n'arrête pas les autres. Un mapping **incomplet** (`complete: false`)
+  garde ses tomes mais n'avance pas `lastCheckedAt` et mémorise sa fenêtre (`retrySince`), rejouée
+  au passage suivant.
+- **État** : `ApiCacheService`, clé `edition-watch:v1:<sha1>`, TTL 180 j (tomes détectés depuis plus
+  de 180 j purgés). Pas de migration Prisma.
+- **Journal du délai** : `edition-watch: new tome title=… vol=… isbn=… noticeCreatedAt=… detectedAt=…`
+  (`initial=true` au premier passage d'une édition, à écarter de la mesure).
+- **Lecture** : `GET /v1/series-updates` (premium) ; passage manuel `POST /v1/admin/edition-watch/run`.
+  La file figure dans `GET /v1/admin/queues`.
 
 ## 5. Reste à faire
 
@@ -252,3 +278,6 @@ conversion des chemins `/app`.)
   (`/health`).
 - Métriques (P3, `70eacaf`) : `src/metrics/queue-metrics.{service,controller,module}.ts` (+ spec +
   e2e). Endpoint `GET /admin/queues` (AdminTokenGuard).
+- Recherche de série + rattrapage (SD1/SD3, branche `feat/manga-recherche-serie`) :
+  `src/common/sources/mangadex/mangadex.{resolver,processor,service,types}.ts` (jobs `search`,
+  `series`), `src/common/sources/bnf/edition-records.ts`, `src/search/watch/*`.

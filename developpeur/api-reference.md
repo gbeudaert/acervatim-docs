@@ -124,7 +124,11 @@ propose le bon parcours : **connecter la source** (`/v1/oauth/:provider/start`) 
 ### Recherche externe unifiée
 | Méthode | Route | Rôle |
 |---|---|---|
-| GET | `/v1/search?type=…&q=…` **ou** `?type=…&barcode=…` | Proxy unifié (`q`/`barcode` mutuellement exclusifs) → `UnifiedItem`. Voir [Sources & pivot ISBN](sources-et-pivot-isbn.md). |
+| GET | `/v1/search?type=…&q=…` **ou** `?type=…&barcode=…` | Proxy unifié (`q`/`barcode` mutuellement exclusifs) → `UnifiedItem`. Le manga par texte est servi par MangaDex, sans jeton. Voir [Sources & pivot ISBN](sources-et-pivot-isbn.md). |
+| GET | `/v1/search/editions?mangaId=…[&title=…]` | Éditions françaises (BnF) d'une série MangaDex : une ligne par (éditeur, mention d'édition). Voir [Recherche d'une série par titre](sources-et-pivot-isbn.md#recherche-serie-titre). |
+| GET | `/v1/search/edition-mapping?title=…[&edition=…][&publisher=…][&since=AAAAMMJJ]` | Tomes d'une édition (BnF) ; `since` = notices créées depuis une date. Voir [Énumération des tomes](sources-et-pivot-isbn.md#enumeration-des-tomes). |
+| POST | `/v1/search/import-jobs` | Import asynchrone d'une édition complète (`title`, `edition`, `publisher`, `mangaId`) ; `GET /v1/search/import-jobs/:id` pour l'avancement. |
+| GET | `/v1/series-updates` | **Premium.** Nouveaux tomes des séries synchronisées détectés par la vérification hebdomadaire. Voir [Nouveaux tomes](sources-et-pivot-isbn.md#nouveaux-tomes). |
 
 > **Résolution des jetons** : chaque appel sortant utilise le jeton de l'utilisateur (**BYOT**) s'il a
 > connecté la source ; sinon, pour un **premium**, un repli sur les jetons Acervatim ; sinon un mode

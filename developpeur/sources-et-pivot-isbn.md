@@ -29,11 +29,12 @@ Chaque type média est servi par un **adapter** (`SourceAdapter`) :
 | `type` | Source | `search` (texte) | `searchByBarcode` | `fetchDetails` |
 |---|---|---|---|---|
 | `vinyl` | Discogs | ✅ | ✅ (EAN via `barcode=`) | ✅ |
-| `manga` | MangaDex (+ BnF), MAL en repli | ✅ (MAL) | ✅ (**ISBN → pivot BnF → MangaDex**) | ✅ (MAL) |
+| `manga` | MangaDex (+ BnF), MAL en repli | ✅ (**MangaDex**, MAL en repli) | ✅ (**ISBN → pivot BnF → MangaDex**) | ✅ (MAL) |
 | `movie` | TMDB | ✅ | — | ✅ |
 
-> L'adapter manga reste `MalAdapter` (il porte l'OAuth MAL et la recherche texte MAL). Son
-> `searchByBarcode` orchestre désormais le pivot **BnF → MangaDex → MAL repli** ; MangaDex n'a **pas
+> L'adapter manga reste `MalAdapter` (il porte l'OAuth MAL). Son `search` interroge **MangaDex sans
+> jeton** et ne passe à MAL qu'en repli (cf. [Recherche d'une série par titre](#recherche-serie-titre)) ;
+> son `searchByBarcode` orchestre le pivot **BnF → MangaDex → MAL repli**. MangaDex n'a **pas
 > d'adapter** ni de jeton (API publique, comme la BnF), il est injecté via `MangaDexCoverService`.
 
 Code : `src/common/sources/` et `src/oauth/providers/` (dépôt `acervatim-backend`).
@@ -348,21 +349,38 @@ C'est le pivot BnF qui rend les éditions spéciales correctes :
   `0` si en cours) → le comptage fiable vient de la BnF, pas de MAL. Le code **loggue un avertissement**
   quand la série MAL est `currently_publishing` / `num_volumes=0`.
 
-## Énumération des tomes (`edition-mapping`)
+## Énumération des tomes (`edition-mapping`) {#enumeration-des-tomes}
 
-`GET /v1/search/edition-mapping?title=<série>[&edition=<205>][&malId=<id>][&mangaId=<id>]` renvoie
-**tous les tomes** d'une édition (« récupérer toute la série d'un coup »). `malId` et **`mangaId`**
-(tous deux optionnels, issus de `metadata.pivot` du scan) fiabilisent le join MangaDex des jaquettes
-(cf. [Jaquettes par tome](#jaquettes-par-tome-mangadex--google-books)) ; `POST /v1/search/import-jobs`
-prend les mêmes champs.
-`BnfService.enumerateEdition` recherche
-`bib.title all "<titre de série>"` (paginé), puis pour chaque notice :
+`GET /v1/search/edition-mapping?title=<série>[&edition=<205>][&publisher=<éditeur>][&malId=<id>][&mangaId=<id>][&since=<AAAAMMJJ>]`
+renvoie **tous les tomes** d'une édition (« récupérer toute la série d'un coup »). `malId` et
+**`mangaId`** (optionnels, issus de `metadata.pivot` du scan ou du candidat choisi en recherche)
+fiabilisent le join MangaDex des jaquettes (cf. [Jaquettes par
+tome](#jaquettes-par-tome-mangadex--google-books)) ; `POST /v1/search/import-jobs` prend les mêmes
+champs (sauf `since`). `BnfService.enumerateEdition` recherche
+`bib.title all "<titre de série>" and bib.doctype any "a"` (texte imprimé : DVD et CD écartés,
+paginé), puis pour chaque notice (`common/sources/bnf/edition-records.ts`) :
 
-1. **Appartenance à la série** — on ne garde que les notices dont la série (`461$t` → `225$a` →
-   `200$a`, normalisée) **égale** le titre demandé. Exclut les spin-offs et homonymes qui matchent le
-   titre (ex. *… : Before the Fall*) et les notices d'ensemble.
-2. **Édition** — filtre sur `205$a` (standard vs `Éd. colossale`…).
-3. **N° de tome** — lu dans `461$v` → `225$v` → `200$h` (dans cet ordre), puis **dédup** par numéro.
+1. **Appartenance à la série** — l'ensemble **`461$t` fait autorité** quand il existe : la notice
+   appartient à la série s'il **égale** le titre demandé (normalisé), et seulement dans ce cas — un
+   spin-off qui répète le titre en `200$a` mais se rattache à un autre ensemble est écarté. **Sans
+   `461`** (pré-notice, catalogage partiel), il suffit que **l'un de** `500$a` (titre uniforme),
+   `200$a` (titre propre) ou `225$a` (collection) l'égale : la pré-notice d'un tome récent, dont
+   `225$a` est la collection de l'éditeur (« Shonen manga »), reste membre par son `200$a`.
+2. **Édition** — une édition est le couple **(éditeur, `205$a`)**. Un `publisher` **explicite** est un
+   filtre strict sur l'éditeur normalisé (« Pika éd. » ≡ « Pika édition » ; « Pika roman » reste
+   distinct). **Absent**, l'éditeur **dominant** (le plus de tomes numérotés) ne gagne que les
+   **collisions** de numéro : les 2-en-1 France Loisirs de *L'attaque des titans* (« 11-12 ») ne
+   prennent plus la place des tomes 11 et 17 de Pika, mais un n° que seul un libellé voisin porte
+   comble le trou (changement de raison sociale en cours de série, Tonkam → Delcourt-Tonkam). Une
+   pré-notice sans `205` n'est pas rangée en standard si son titre porte un mot-clé d'art **hors des
+   mots du titre de série** (« Hellsing perfect edition » → perfect ; *Perfect World* reste standard).
+3. **N° de tome** — lu dans `461$v` / `225$v` seulement si leur titre est celui de la série (le `$v`
+   d'une collection éditeur est un n° de collection), sinon `200$h` ; puis **dédup** par numéro.
+
+La réponse indique l'éditeur retenu (`publisher`), et **`complete: false`** si l'énumération a été
+tronquée ou qu'une page SRU a échoué. Chaque tome porte la date de création de sa notice
+(`noticeCreatedAt`, `100$a`) ; `since` ne renvoie que les notices créées depuis cette date (cf.
+[Nouveaux tomes](#nouveaux-tomes)).
 
 > ⚠️ **Le titre de série est décisif.** Le catalogage varie : chez Pika (SNK, Maid sama) `200$a` **est**
 > le titre de série, répété sur chaque tome ; chez **Ki-oon** (Jujutsu Kaisen) `200$a` est le titre du
@@ -389,6 +407,47 @@ pour la jaquette* (donc **sans appel supplémentaire** ; il s'agit souvent du r�
 repli assumé) → sinon **`null`**. On **ne retombe pas** sur le synopsis de série au niveau du tome : si
 aucune source par tome n'existe, le détail du tome n'affiche **pas** de résumé (le synopsis de série
 reste sur le détail *de série*, `Series.synopsis`).
+
+## Recherche d'une série par titre {#recherche-serie-titre}
+
+Pour ajouter une série **sans en posséder de tome** (le besoin wishlist), l'app enchaîne trois appels,
+tous **sans jeton** :
+
+1. `GET /v1/search?type=manga&q=<texte>` — **MangaDex** cherche aussi dans ses titres alternatifs, dont
+   les titres français. Tri par nombre de suivis, tags Doujinshi / Anthology / Official Colored / Fan
+   Colored exclus : sur « Frieren », la vraie série passe en tête au lieu d'un crossover. Chaque
+   résultat porte `metadata` = `{ mangaId, titleFr, titleRomaji, malId, anilistId, status,
+   num_volumes, year, contentRating }`. MAL n'intervient qu'en repli, **sur la première page
+   seulement** et en une seule page (pas de page suivante) : MangaDex n'a rien trouvé **et** un jeton
+   MAL est disponible, ou MangaDex est indisponible.
+2. `GET /v1/search/editions?mangaId=<uuid>[&title=<saisie>]` — le backend relit la série MangaDex par
+   son id (titres, auteurs), interroge la BnF et renvoie ses **éditions françaises**, une ligne par
+   (série, éditeur, mention d'édition) : `seriesTitleFr`, `publisher` (`null` si la notice n'en porte
+   pas), `edition`, `isArtEdition`, `tomeCount`, `firstYear`, `lastYear`, `ongoing`,
+   `hasSourceVolumeRange`, `sampleIsbn` — plus `complete` pour la liste entière. Liste vide si la BnF
+   ne connaît pas la série (l'app propose alors la création manuelle) ; `502` si aucune notice n'a pu
+   être lue parce qu'une lecture BnF a échoué.
+3. `POST /v1/search/import-jobs { title: seriesTitleFr, edition, publisher, mangaId }` puis
+   `edition-mapping` avec les mêmes valeurs : l'app crée la série (édition et éditeur compris) et
+   **tous ses tomes en wishlist**.
+
+Le choix de la série revient à l'utilisateur : son `mangaId` rend inutile tout rapprochement par
+titre pour les jaquettes.
+
+## Nouveaux tomes d'une série en cours {#nouveaux-tomes}
+
+Un tome n'apparaît à la BnF qu'une fois sa notice créée : **3 à 4 semaines** après la sortie chez les
+grands éditeurs français, **environ 3 mois** pour un éditeur hors de France (mesuré sur peu de cas).
+`edition-mapping?since=<AAAAMMJJ>` (`bib.creationdate`, format strict — `AAAA-MM-JJ` renverrait 0
+notice sans erreur) donne les tomes catalogués depuis une date. Deux déclencheurs :
+
+- **l'app**, à l'ouverture d'une série en cours dont la dernière vérification date d'au moins 7 jours
+  (fenêtre `since` avec 7 jours de marge) ;
+- **le serveur**, chaque lundi, pour les séries synchronisées des comptes premium qui portent un
+  titre et un éditeur ; le résultat se lit sur `GET /v1/series-updates`.
+
+Dans les deux cas, les tomes trouvés sont **proposés**, jamais ajoutés d'office ; une énumération
+incomplète ne fait pas avancer la date de vérification.
 
 ## Jaquettes par tome (MangaDex → Google Books) {#jaquettes-par-tome-mangadex--google-books}
 
@@ -551,8 +610,10 @@ serveur** (pas de trigramme SQL : la base est MariaDB).
   API gratuite** (MangaDex, Google, OL, AniList, Kitsu) n'en fournit le visuel. On assume alors la
   **jaquette absente** plutôt qu'un visuel faux (couvrir vraiment = scraping éditeur FR, hors scope).
 - **Catalogage BnF irrégulier** : géré mais heuristique — n° de tome en `461$v`/`225$v`/`200$h` selon
-  l'éditeur ; titre de série en `461$t` (fiable) car `200$a` peut être le titre du tome et `225$a` la
-  collection éditeur ; `210` vs `214` selon l'ancienneté.
+  l'éditeur ; appartenance à la série par `461$t` quand il existe, sinon par `500$a`/`200$a`/`225$a`,
+  car `200$a` peut être le titre du tome et `225$a` la collection éditeur ; `210` vs `214` selon l'ancienneté. Les tomes récents
+  n'existent d'abord qu'en **pré-notice** (sans mention d'édition, auteur en `702`), et seulement
+  quelques semaines après leur sortie.
 - **Repli titre FR** : n'aboutit que si le titre FR ≈ le titre indexé (titres latins). Un titre FR
   traduit (« L'Attaque des Titans ») ne matchera pas par ce repli — mais ces notices portent un
   `454$t` romaji, donc n'empruntent pas le repli.

@@ -17,7 +17,7 @@
 | Ajouter une source externe / un adapter | `be:oauth/providers/*.adapter.ts` + `be:common/sources/` | [transverse/sources-externes.md](sources-externes.md) |
 | Toucher au repli quand la BnF ignore l'ISBN | `be:oauth/providers/mal.adapter.ts` (`googleBooksPivot`) + `be:common/sources/title-ladder.ts` | [transverse/sources-externes.md](sources-externes.md) § repli Google Books |
 | Comprendre un flux complet (scan, sync, premium…) | — | [transverse/flux-metier.md](flux-metier.md) |
-| Comprendre le découpage en services / la cible micro-services | — | [backend/architecture-microservices.md](../backend/architecture-microservices.md) (**cible non engagée** : rien de tout cela n'est implémenté) |
+| Comprendre le découpage en services / la cible micro-services | — | [backend/architecture-microservices.md](../backend/architecture-microservices.md) (**cible non engagée** ; implémentation non déployée dans le dépôt local `acervatim/backend-services`) |
 | Toucher auth / JWT / identité | `be:auth/`, `be:common/guards/jwt-auth.guard.ts` ; `app:data/remote/auth/` | [backend/securite-et-privacy.md](../backend/securite-et-privacy.md) |
 | Lancer le backend / une migration / les tests | `acervatim-backend/scripts/dev.ps1` | [backend/operations-dev.md](../backend/operations-dev.md) |
 | Builder/tester l'app | `.\gradlew.bat assembleDebug / test / lint` | [conventions.md](../conventions.md) |
@@ -47,7 +47,7 @@
 | Tome, volume | `be:items/` (unique userId+nodeId+volume) · `app:ui/manga/` |
 | Scan, barcode, ML Kit | `app:ui/scan/` · `app:domain/usecase/LookupByBarcodeUseCase.kt` |
 | ISBN, BnF, UNIMARC, édition | `be:common/sources/bnf/` · `be:search/` |
-| MangaDex, identité manga, jaquettes/tome | `be:common/sources/mangadex/` (identify + covers) · `be:common/sources/manga-matching.ts` (rapprochement partagé + `isSpecialArtEdition`) |
+| MangaDex, identité manga, recherche de séries, jaquettes/tome | `be:common/sources/mangadex/` (identify + search + series + covers) · `be:common/sources/manga-matching.ts` (rapprochement partagé + `isSpecialArtEdition`) |
 | Discogs | `be:oauth/providers/discogs.adapter.ts` (+ `oauth1.ts`) |
 | MAL, MyAnimeList (identité repli + pivot) | `be:oauth/providers/mal.adapter.ts` (+ `pkce.ts`) — `searchByBarcode` orchestre BnF → MangaDex → MAL |
 | TMDB | `be:oauth/providers/tmdb.adapter.ts` |
@@ -55,7 +55,9 @@
 | Recherche **texte** Discogs, choisir le bon pressage | `be:oauth/providers/discogs.adapter.ts` (`mapSearchResult`) — cf. [recherche-textuelle-discogs.md](../backend/recherche-textuelle-discogs.md) |
 | Ajouter un disque **sans code-barres** (recherche par titre) | `app:ui/search/` · `app:domain/usecase/SearchExternalByTextUseCase.kt` · `app:domain/model/PressingGroup.kt` (regroupement par `masterId`) |
 | Erreur de recherche externe rendue actionnable (403 jeton, réseau, 429) | `app:domain/model/ExternalSearchFailure.kt` — traduite dans `app:data/remote/search/ExternalSearchRepositoryImpl.kt` |
-| Ajouter une **série manga** sans en posséder un tome (recherche par titre) | Chantier non démarré — cadrage dans [spec-macro-import-serie-manga.md](../../spec-macro-import-serie-manga.md) |
+| Ajouter une **série manga** sans en posséder un tome (recherche par titre) | Branches `feat/manga-recherche-serie` : `app:ui/series/SeriesSearch{Screen,ViewModel}.kt` · `app:domain/usecase/SearchMangaSeriesUseCase.kt` · `app:domain/model/SeriesSearch.kt` · `ImportScannedSeriesUseCase.importFromSearch` · `be:oauth/providers/mal.adapter.ts` (`search` → MangaDex) · `be:search/search.service.ts` (`listEditions`) — cf. [spec-macro-import-serie-manga.md](../../spec-macro-import-serie-manga.md) |
+| Édition d'une série (éditeur + `205$a`), notices BnF, pré-notices | `be:common/sources/bnf/edition-records.ts` · `app:domain/model/EditionKey.kt` |
+| Nouveaux tomes d'une série en cours (rattrapage) | `be:search/watch/` (file `edition-watch`, `GET /v1/series-updates`) · `app:domain/usecase/SeriesCatchUpUseCase.kt` · `app:domain/model/SeriesCatchUp.kt` · `app:ui/series/NewVolumesBanner.kt` · `app:data/local/settings/DataStoreSeriesCatchUpStore.kt` |
 | Éditions d'une série (standard / colossale), mention `205$a` | `be:common/sources/bnf/bnf.service.ts` (`enumerateEdition`, filtre `rec205`) · `app:domain/model/MangaExtras.kt` (`KEY_EDITION`) |
 | Taux de hit du cache partagé, pression quota d'une source | `be:src/common/cache/api-cache.service.ts` (`stats()`) · `GET /v1/admin/queues` → `cache[]` |
 | Sync, WorkManager | `app:data/remote/sync/` (SyncManagerImpl, SyncWorker) |

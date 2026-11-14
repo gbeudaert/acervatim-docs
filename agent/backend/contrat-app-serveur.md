@@ -43,7 +43,7 @@ Légende : ✅ synchronisé · ⚠️ synchronisé avec une réserve · ❌ volo
 | `extras.sourceVolumeRange` | `unifiedData.sourceVolumeRange` (manga) | ✅ |
 | `extras.demographic` | `MangaSerieSchema.demographic` — niveau **série** | ⚠️ l'app le range par tome, le serveur par série : pas de home au niveau item (redondant par tome) |
 | `extras.originalAuthor` | `MangaSerieSchema.author` — niveau **série** | ⚠️ idem |
-| `extras.edition` | aucun | ❌ notion d'édition FR propre à l'app (regroupement d'affichage), sans équivalent dans le modèle serveur |
+| `extras.edition` | `unifiedData.edition` (manga, `MangaItemSchema`, `collections/types/manga.ts:33`) | ✅ depuis SD2 (branche `feat/manga-recherche-serie`). `MangaItemSchema` est `.strict()` : un serveur sans SD2 rejette en `400` un tome qui porte `edition` — **déployer le backend avant l'app** |
 | `extras.tomeSynopsis` | aucun (≠ `userData.note`, voir ci-dessous) | ❌ `userData.note` est une note **privée saisie par l'utilisateur**, pas un synopsis ; les confondre mélangerait curé et subjectif |
 | `coverPath` | aucun | ❌ **photo prise par l'utilisateur**. Le serveur ne stocke aucune image (invariant privacy, cf. [securite-et-privacy.md](securite-et-privacy.md)) — voir « Blocage web » |
 | — | `userData.note` (note libre par item) | 🔸 existe côté serveur, **l'app ne l'expose pas**. À reprendre côté app, pas à retirer côté serveur |
@@ -57,6 +57,9 @@ Légende : ✅ synchronisé · ⚠️ synchronisé avec une réserve · ❌ volo
 | `publicationStatus` | `unifiedData.status` (`ongoing`/`finished`/`hiatus`/`unknown`) | ✅ mappé depuis le libellé FR |
 | `totalVolumes` | `unifiedData.totalCount` | ✅ |
 | `synopsis` | `unifiedData.synopsis` | ✅ |
+| `edition` | `unifiedData.edition` (`205$a` BnF, `null` = standard) | ✅ depuis SD2 / AD2 — entre dans la clé naturelle Room v8 |
+| `publisherFr` | `unifiedData.publisherFr` | ✅ depuis SD2 / AD2 — entre dans la clé naturelle Room v8 ; avec `title`, condition pour que le rattrapage serveur suive la série |
+| `mangaId` | `unifiedData.mangaId` (id MangaDex) | ✅ depuis SD2 / AD2 — join direct des jaquettes |
 | `coverPath` | aucun | ❌ photo locale, même raison que pour l'item |
 | — | `unifiedData.coverUrl` (jaquette série du provider) | 🔸 `Series` n'a pas de champ équivalent : la jaquette série distante n'est pas restituée au pull |
 | — | `unifiedData.rating` (moyenne MAL) | 🔸 lu par `NodeDto`, absent de `Series` |

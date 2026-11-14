@@ -30,7 +30,7 @@ app/acervatim/
 |---|---|
 | [architecture.md](architecture.md) | Couches, DI, catalogue des use cases et repositories |
 | [ecrans-et-navigation.md](ecrans-et-navigation.md) | Routes de navigation ↔ écrans ↔ ViewModels |
-| [donnees-locales.md](donnees-locales.md) | Room (entités/DAO/migrations), DataStore, stockage covers, backup ZIP |
+| [donnees-locales.md](donnees-locales.md) | Room (entités/DAO/migrations, **v8** : édition dans la clé naturelle des séries, `records.normalized_title`), DataStore (dont l'état du rattrapage des séries), stockage covers, backup ZIP |
 | [reseau-sync-compte.md](reseau-sync-compte.md) | Client API, auth Google, tokens, sync, compte |
 | [catalogue-fonctionnalites.md](catalogue-fonctionnalites.md) | Feature → fichiers impliqués (point d'entrée recommandé) |
 

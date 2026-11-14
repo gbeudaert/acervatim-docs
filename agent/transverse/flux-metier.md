@@ -28,9 +28,38 @@ BarcodeScanScreen (CameraX) → BarcodeAnalyzer (ML Kit) → BarcodeScanViewMode
 ```
 Scan ISBN d'un tome → SeriesImportScreen (route series/import?barcode=)
   → GET /v1/search (identifie le tome + titleFr)
-  → GET /v1/search/edition-mapping?title=<titreFr>&edition=<mention>
-  → backend: BnfService.enumerateEdition (SRU BnF + unimarc.parser) → liste des tomes de l'édition
+  → GET /v1/search/edition-mapping?title=<titreFr>&edition=<mention>&publisher=<éditeur>&mangaId=
+  → backend: BnfService.enumerateEdition (SRU BnF + edition-records.ts) → liste des tomes de l'édition
   → app: ImportScannedSeriesUseCase → UpsertSeriesUseCase + création des tomes (owned/wishlist)
+```
+
+## 3bis. Ajout d'une série manga par titre, sans tome possédé (SD1 · AD1 · AD2)
+
+Branches `feat/manga-recherche-serie` (non fusionnées). Cf.
+[../../spec-macro-import-serie-manga.md](../../spec-macro-import-serie-manga.md).
+
+```
+Vue séries manga (connecté) → feuille d'ajout « Rechercher une série » → route series/search
+  → SeriesSearchViewModel (debounce 400 ms, 3 caractères) → SearchMangaSeriesUseCase
+  → GET /v1/search?type=manga&q=<texte>      (MangaDex sans jeton → SeriesCandidate)
+  → choix du candidat → GET /v1/search/editions?mangaId=<uuid>&title=<saisie>  (BnF → SeriesEditionOption)
+     └─ aucune édition / candidat sans mangaId → création manuelle pré-remplie (AddEditSeries)
+  → choix de l'édition → WarmEditionImportUseCase : POST /v1/search/import-jobs { title, edition,
+     publisher, mangaId } + polling (même écran d'avancement que le scan)
+  → ImportScannedSeriesUseCase.importFromSearch → série (édition, éditeur, mangaId) + tous les tomes
+     en WISHLIST, dédup par ISBN
+```
+
+## 3ter. Rattrapage des nouveaux tomes (SD3 · AD3)
+
+```
+App, ouverture d'une série (connecté) → SeriesDetailViewModel → SeriesCatchUpUseCase.check
+  éligible : manga, titre + éditeur connus, parution non terminée, dernière vérification ≥ 7 j
+  → GET /v1/search/edition-mapping?…&publisher=&since=<dernière vérif − 7 j>   (bib.creationdate)
+  → premium : + GET /v1/series-updates (SeriesUpdatesCache 10 min/compte ; fusion par nodeId ↔ remoteId)
+  → tomes absents (ISBN normalisé ET n°) → bannière « N nouveaux tomes » → addToWishlist / Plus tard
+Serveur, lundi 04:00 → file edition-watch → editionMapping(since) par édition suivie
+  → état ApiCache edition-watch:v1:<sha1> → servi par GET /v1/series-updates
 ```
 
 ## 4. Synchronisation locale ↔ cloud
