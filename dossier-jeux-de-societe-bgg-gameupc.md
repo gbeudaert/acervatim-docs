@@ -2,7 +2,9 @@
 
 > **Document interne** (exclu du site publié). Il rassemble tout ce qui concerne les jeux de société
 > au **2026-11-04** : les études, ce qui est construit, ce qui est prévu, ce qui reste à faire et ce
-> qui reste à trancher. Il consolide quatre sources, qui restent les références de détail :
+> qui reste à trancher. Mis à jour le **2026-11-14** : demande de licence BGG envoyée, quatre
+> décisions prises (§ 6 et § 7.1 à 7.4). Il consolide quatre sources, qui restent les références de
+> détail :
 >
 > - [agent/backend/gameupc-bgg.md](agent/backend/gameupc-bgg.md) : fiche technique de ce qui est
 >   construit (index pour les agents) ;
@@ -22,14 +24,17 @@
   feront la couverture française.
 - **BGG : licence non commerciale pour l'instant.** Acervatim est gratuit, édité par une personne
   physique, et ne vend rien. Le palier premium, prévu plus tard, exigera une licence commerciale
-  obtenue avant son lancement (en général gratuite jusqu'à 100 utilisateurs payants). Tant
-  qu'aucune licence n'est accordée, aucun appel BGG ne part : le code est prêt, mais désactivé.
-- **La résolution du code-barres est construite** dans le service `search` et testée, mais **pas
-  encore commitée**.
+  obtenue avant son lancement (en général gratuite jusqu'à 100 utilisateurs payants). **La demande
+  a été envoyée le 2026-11-14 : pending.** Tant qu'aucune licence n'est accordée,
+  aucun appel BGG ne part : le code est prêt, mais désactivé.
+- **La résolution du code-barres est construite** dans le service `search`, testée, commitée le
+  2026-11-13 et fusionnée dans `main` le 2026-11-14.
 - **Le catalogue des jeux (`catalog-boardgame`) et la base de référence BGG (`bgg-data`) sont
   spécifiés en brouillon**, pas construits.
-- Quatre décisions conditionnent la suite : qui appelle BGG et à quel débit, faut-il effacer les
-  votes à la suppression d'un compte, faut-il faire choisir l'édition, et que faire si BGG refuse.
+- **Quatre décisions ont été prises le 2026-11-14** : `bgg-data` sera le seul service à appeler BGG,
+  le choix de l'édition sera proposé en option, aucune liste de votes n'est gardée par utilisateur,
+  et le scan reste ouvert à tous les utilisateurs connectés. Reste ouvert : que faire si BGG refuse
+  (§ 7.6), qui attend sa réponse.
 
 ---
 
@@ -97,7 +102,7 @@ annonce plus de 15 000 codes validés. Son fonctionnement est simple à comprend
 C'est un cercle vertueux : chaque utilisateur qui choisit fait gagner du temps aux suivants.
 
 GameUPC expose trois serveurs : `/test` (clé publique `test_test_test_test_test`, vidé
-périodiquement), `/dev` (instable) et `/v1` (production, clé **à demander par courriel**). La clé
+périodiquement), `/dev` (instable) et `/v1` (production, clé **demandée par courriel : pending**). La clé
 s'envoie dans l'en-tête `x-api-key`.
 
 ---
@@ -227,7 +232,7 @@ silencieuses.
 | Les clés ne seraient pas exigées | Clé absente ou fausse : `403` non documenté ; la clé de test est refusée en production | Le `403` est traité comme une erreur de configuration |
 | Quatre issues dans le brief (vérifié, à choisir, inconnu, erreur) | GameUPC n'a **que deux statuts** ; « inconnu » est un « à choisir » sans candidat | Le serveur reconstitue les quatre issues pour l'app |
 | (rien) | **Un vote par couple (code, votant)** : revoter remplace, renvoyer le même vote ne change rien | Les votes peuvent être retentés sans risque |
-| Limite de débit | **Aucune limite ni condition d'utilisation publiée** | Débits provisoires, à faire confirmer |
+| Limite de débit | **Aucune limite ni condition d'utilisation publiée** ; par courriel (2026-11-18) : environ 30 requêtes par minute avant que les fournisseurs amont ne saturent | 20 par minute au total, consultations et votes |
 
 Écarts mineurs : coquilles et types (`published` est une chaîne), champs non documentés, réponses
 lourdes (environ 160 Ko pour *Kingdomino*, à cause des versions).
@@ -341,11 +346,14 @@ Les files bornent le débit vers chaque source :
 
 | File | Débit | En cas d'échec | Sur un refus pour excès (`429`) |
 |---|---|---|---|
-| `gameupc` (consultation) | 2 requêtes/s, une à la fois | Une tentative ; l'app reçoit la dernière réponse connue | File en pause (`Retry-After`, sinon 30 s) |
-| `gameupc-feedback` (votes) | 1 requête/s | Six tentatives sur environ 15 minutes ; un refus définitif n'est pas retenté | Idem |
+| `gameupc` (consultation) | 15 par minute, une toutes les 4 s | Une tentative ; l'app reçoit la dernière réponse connue | File en pause (`Retry-After`, sinon 30 s) |
+| `gameupc-feedback` (votes) | 5 par minute, un toutes les 12 s | Six tentatives sur environ 15 minutes ; un refus définitif n'est pas retenté | Idem |
 | `bgg` (fiche) | 1 requête toutes les 2 s | Quatre tentatives, espacées de plus en plus | Pause sur `429` et `503` (sinon 60 s) |
 
-Les débits GameUPC sont **provisoires**, faute de limite publiée.
+Les débits GameUPC totalisent 20 par minute. Son mainteneur indique, par courriel du 2026-11-18,
+qu'au-delà d'environ 30 requêtes par minute ses fournisseurs amont saturent et ses suggestions se
+dégradent. Prix à payer : dans une rafale de scans de codes inconnus du cache, seuls les deux
+premiers environ répondent tout de suite ; les suivants arrivent au scan suivant.
 
 **Pourquoi un vote ne peut pas partir deux fois par erreur.** Trois situations piégeuses sont
 couvertes :
@@ -371,9 +379,8 @@ couvertes :
 
 ### 4.6 L'état du code
 
-- **Rien n'est commité.** Le travail se trouve dans l'arbre de travail de `backend-services`, sur la
-  branche `feat/manga-recherche-serie`, qui est celle de la recherche manga. Il faudra le déplacer
-  sur une branche dédiée avant de commiter.
+- **Commité le 2026-11-13 et poussé le 2026-11-14** dans `main` de la constellation (`acervatim-services`) :
+  commits `8876527` (service `search`) et `a55821d` (routes du gateway). Rien n'est déployé.
 - Emplacements : `search/src/common/barcode/` (normalisation), `search/src/sources/gameupc/`,
   `search/src/sources/bgg/`, `search/src/search/boardgame/` (service et routes), fixtures dans
   `search/test/fixtures/{gameupc,bgg}/`. Les deux routes sont déclarées au gateway.
@@ -433,6 +440,10 @@ ensuite. La recherche texte BGG n'est pas construite.
 | BGG désactivé tant qu'aucune licence n'est accordée | Aucun appel sans application approuvée (§ 3.1) | La licence |
 | Normaliser le code avant tout appel | GameUPC ne valide rien et indexe des chaînes (§ 3.3) | — |
 | Type `boardgame` distinct de `game` | `game` désigne déjà le jeu vidéo | À confirmer en validant la spec (7.7) |
+| **`bgg-data` seul appelle BGG**, une requête toutes les 5 s (2026-11-14) | Un seul jeton, un seul limiteur, une seule purge ; BGG n'est jamais appelé pendant une requête d'utilisateur (§ 7.1) | Un débit ou des conditions de licence qui imposeraient un autre partage |
+| **Le choix de l'édition est proposé, en option** (2026-11-14) | C'est le vote d'édition qui apprend à GameUPC à reconnaître un EAN français (§ 7.2) | Une réponse de GameUPC qui rendrait ce vote inutile |
+| **Aucune liste de votes par utilisateur** ; à la suppression d'un compte, seuls les votes encore en file sont retirés (2026-11-14) | `search` ne stocke aucune donnée d'utilisateur ; le pseudonyme ne se relie plus à personne une fois le compte supprimé (§ 7.3) | Un avis juridique contraire |
+| **Le scan d'un jeu est ouvert à tous les utilisateurs connectés** (2026-11-14) | Comme le reste de la recherche ; aucune donnée BGG ne devient un avantage payant, ce qui reste cohérent avec la licence non commerciale (§ 7.4) | Le lancement du premium, à réexaminer avec la licence commerciale |
 
 ---
 
@@ -453,10 +464,11 @@ dépasse alors les deux plafonds, et c'est notre licence qui est en jeu.
 - (c) **`bgg-data` seul appelle BGG.** `search` lit la fiche chez `bgg-data`. Pour un jeu que
   `bgg-data` n'a pas encore, `search` lui demande de le récupérer en priorité, dans sa propre file.
 
-**Recommandation : (c), à 5 s.** Un seul jeton, un seul limiteur, une seule purge. L'app affiche
-tout de suite ce que donne GameUPC (nom, année, vignette) et reçoit la fiche complète un peu plus
-tard. Le client BGG de `search` est déjà derrière une interface : il suffira d'en changer
-l'implémentation. Il faut alors ajouter à la spec une route de récupération prioritaire.
+**Tranché le 2026-11-14 : (c), à 5 s.** Un seul jeton, un seul limiteur, une seule purge. L'app
+affiche tout de suite ce que donne GameUPC (nom, année, vignette) et reçoit la fiche complète un peu
+plus tard. Le client BGG de `search` est déjà derrière une interface : il suffira d'en changer
+l'implémentation. La spec prévoit désormais une route de récupération prioritaire dans `bgg-data`
+(`POST /internal/games/:bggId/refresh`), servie par la même file que le moissonnage.
 
 ### 7.2 Faut-il faire choisir l'édition ?
 
@@ -464,9 +476,9 @@ l'implémentation. Il faut alors ajouter à la spec une route de récupération 
 dont 3 françaises, toutes à confiance nulle. Sans vote d'édition, GameUPC ne saura jamais quelle
 version correspond à la boîte française.
 
-**Recommandation : oui, en option**, avec les versions dans la langue de l'utilisateur et les
-versions multilingues en tête. À demander à GameUPC : un vote d'édition compte-t-il aussi pour le
-jeu ?
+**Tranché le 2026-11-14 : oui, en option**, avec les versions dans la langue de l'utilisateur et
+les versions multilingues en tête. À demander à GameUPC : un vote d'édition compte-t-il aussi pour
+le jeu ?
 
 ### 7.3 Faut-il retirer les votes d'un utilisateur quand il supprime son compte ?
 
@@ -475,17 +487,18 @@ la liste des votes de chaque utilisateur, c'est-à-dire une donnée d'utilisateu
 s'interdit de stocker. Et `catalog-boardgame` ne peut pas l'héberger : sa spec lui interdit tout
 code métier hors de son profil.
 
-**Recommandation : ne pas garder cette liste.** Le pseudonyme est calculé à partir de l'identifiant
-et d'un secret, et GameUPC ne voit jamais cet identifiant. Une fois le compte supprimé, plus
-personne ne peut relier un vote à la personne, et un vote dit seulement « tel code est tel jeu ».
-En complément, à la suppression d'un compte, retirer les votes **encore en file** pour ce compte
-(un vote en échec garde le pseudonyme jusqu'à sept jours dans Redis). Ce point est à valider côté
-juridique et à écrire dans la politique de confidentialité.
+**Tranché le 2026-11-14 : ne pas garder cette liste.** Le pseudonyme est calculé à partir de
+l'identifiant et d'un secret, et GameUPC ne voit jamais cet identifiant. Une fois le compte
+supprimé, plus personne ne peut relier un vote à la personne, et un vote dit seulement « tel code
+est tel jeu ». En complément, à la suppression d'un compte, retirer les votes **encore en file**
+pour ce compte (un vote en échec garde le pseudonyme jusqu'à sept jours dans Redis). Ce point reste
+à valider côté juridique et à écrire dans la politique de confidentialité.
 
 ### 7.4 Les routes sont-elles réservées au premium ?
 
-Aujourd'hui, elles sont ouvertes à tous les utilisateurs connectés, comme le reste de la recherche.
-À confirmer.
+**Tranché le 2026-11-14 : non.** Elles restent ouvertes à tous les utilisateurs connectés, comme le
+reste de la recherche. Aucune donnée BGG ne devient ainsi un avantage payant, ce qui reste cohérent
+avec la licence non commerciale. À réexaminer au lancement du premium.
 
 ### 7.5 Que faire quand GameUPC ne sait pas ?
 
@@ -509,8 +522,8 @@ publiquement qui dépende de BGG d'ici là (§ 8, documentation).
 
 ### 7.7 Valider la spec `catalog-boardgame` / `bgg-data`
 
-Elle est en brouillon. Sa validation fixe le type `boardgame`, et c'est le bon moment pour y
-intégrer la réponse à 7.1 (route de récupération prioritaire, débit unique).
+Elle est en brouillon. Sa validation fixe le type `boardgame`. La réponse à 7.1 y a été intégrée le
+2026-11-14 (route de récupération prioritaire, débit unique) ; il reste à la relire et à la valider.
 
 La spec interdit aussi de télécharger le dump automatiquement : un opérateur le pousse. Or la page
 officielle relue le 2026-11-13 prévoit le téléchargement avec le jeton d'application. Une fois la
@@ -528,31 +541,36 @@ décisions produit, sans urgence.
 
 ### Démarches externes
 
-- [ ] **GameUPC** : demander la clé de production par courriel (questions au § 9).
+- [x] **GameUPC** : demander la clé de production par courriel (questions au § 9). Envoyé (action F1
+  du plan) ; clé accordée le 2026-11-18.
 - [x] **BGG** : relire la page « Using the XML API » (fait le 2026-11-13, § 3.1).
 - [ ] **BGG** : relire les conditions d'utilisation de l'API (« XML API terms of use »).
-- [ ] **BGG** : enregistrer l'application en « Non commercial », en annonçant le palier premium
-  prévu (questions au § 9), puis suivre le forum « Geek Tools News », où BGG annonce ses
-  changements.
+- [x] **BGG** : enregistrer l'application en « Non commercial » (demande envoyée le 2026-11-14,
+  réponse attendue sous une semaine ou plus : **pending**).
+- [ ] **BGG**, à la réponse : renseigner `BGG_API_TOKEN`, poser les questions du § 9 restées sans
+  réponse, puis suivre le forum « Geek Tools News », où BGG annonce ses changements.
 - [ ] **BGG**, avant le lancement du premium : obtenir la licence commerciale.
 
 ### Backend
 
-- [ ] Reporter dans `rebrickable-data/src/common` les deux modifications de `search/src/common`.
-- [ ] Déplacer le travail sur une branche dédiée, puis commiter.
-- [ ] À la suppression d'un compte, retirer les votes en file (si 7.3 est suivie).
-- [ ] Avec la clé de production : refaire les mesures du § 3.2 et recaler les débits GameUPC.
+- [x] Reporter dans `rebrickable-data/src/common` les deux modifications de `search/src/common`
+  (fait le 2026-11-14 : les deux socles sont identiques).
+- [x] Déplacer le travail sur une branche dédiée, puis commiter (fait le 2026-11-13, fusionné dans
+  `main` le 2026-11-14).
+- [ ] À la suppression d'un compte, retirer les votes en file (décision 7.3).
+- [x] Recaler les débits GameUPC sur la réponse du mainteneur : 20 par minute au total (2026-11-20).
+- [ ] Avec la clé de production : refaire les mesures du § 3.2 sur `/v1`.
 - [ ] Avec la licence BGG : remplacer la fixture BGG construite par une vraie réponse.
 - [ ] Après validation de la spec : construire `catalog-boardgame` et `bgg-data`.
-- [ ] Puis brancher `search` sur `bgg-data` et retirer son appel direct à BGG (si 7.1 (c) est
-  retenue).
+- [ ] Puis brancher `search` sur `bgg-data` et retirer son appel direct à BGG (décision 7.1).
 
 ### App
 
 - [ ] Envoyer le format du code scanné (indispensable pour un UPC-E).
 - [ ] Afficher le logo « Powered by BGG », lié à la fiche BGG du jeu (`pageUrl`).
-- [ ] Écran de choix : les candidats **et** un champ de recherche pré-rempli par `searchedFor` ;
-  les éditions de la langue de l'utilisateur en tête.
+- [ ] Écran de choix : les candidats **et** un champ de recherche pré-rempli par `searchedFor`.
+- [ ] Choix de l'édition, en option (décision 7.2) : les éditions de la langue de l'utilisateur et
+  les multilingues en tête.
 - [ ] Gérer `unavailable` (réessayer, saisir à la main) et signaler une réponse `stale`.
 
 ### Documentation et juridique
@@ -576,8 +594,14 @@ décisions produit, sans urgence.
 3. Le seuil de vérification en production : la démo parle de « deux votes non contestés », un seul
    suffit sur le serveur de test.
 4. Un vote d'édition compte-t-il aussi pour le jeu ?
-5. Peut-on retirer en bloc les votes d'un `user_id`, au cas où la question 7.3 serait tranchée
-   autrement ?
+
+Réponse du mainteneur le 2026-11-18 : les questions 1 à 3 sont réglées (clé accordée, ni coût ni
+attribution, même avec le premium ; environ 30 requêtes par minute avant que ses fournisseurs
+saturent ; un seul vote humain concordant suffit en production). La question 4 est restée sans
+réponse directe.
+
+La question du retrait en bloc des votes d'un `user_id` ne se pose plus depuis la décision 7.3.
+Le brouillon de la demande est dans `private/courriers/` (dossier local, non versionné).
 
 ### À BGG
 

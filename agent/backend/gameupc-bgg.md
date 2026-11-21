@@ -19,8 +19,9 @@
 
 ## 1. Où ça s'insère dans `backend-services`
 
-Le chantier en cours de la constellation est le découpage (README de `backend-services`, § 6) et la
-recherche manga (`feat/manga-recherche-serie`). Les jeux de société n'y figuraient pas. La spec en
+Au 2026-11-04, le chantier de la constellation était le découpage (README de `backend-services`,
+§ 6) et la recherche manga. Les jeux de société n'y figuraient pas. Le code décrit ici est dans
+`main` depuis le 2026-11-14 (commits `8876527`, `a55821d`), non déployé. La spec en
 brouillon du 2026-11-03,
 [spec-catalog-boardgame-bgg-data.md](../../_bmad-output/implementation-artifacts/spec-catalog-boardgame-bgg-data.md),
 prévoit `catalog-boardgame` et un service de référence local `bgg-data` à la manière de
@@ -137,8 +138,9 @@ Une version : `version_id`, `name`, `published`, `language`, `language_id`, imag
 - Le brief compte quatre issues (verified, choose_from…, inconnu, erreur). GameUPC n'a **que deux
   statuts** : « inconnu » est `choose_from_bgg_info_or_search` avec un `bgg_info` vide (et
   `new: true`), « erreur » un statut HTTP.
-- « Aligné sur ses conditions une fois vérifiées » : il n'y en a pas de publiées. Les débits retenus
-  sont provisoires (§ 5) et figurent dans les questions ouvertes.
+- « Aligné sur ses conditions une fois vérifiées » : il n'y en a pas de publiées. Le mainteneur les
+  a données par courriel le 2026-11-18 (§ 8) : ni coût ni attribution, et environ 30 requêtes par
+  minute avant que ses fournisseurs amont ne saturent. Débit retenu : 20 par minute (§ 5).
 - Le vote existe en deux formes (jeu seul, jeu et édition) et se lit (`GET …/user_id/…`) : cette
   lecture sert à ne pas écraser un choix plus récent par un vote retenté.
 
@@ -190,9 +192,15 @@ l'état renvoyé.
 
 | File | Débit | Tentatives | Sur 429 |
 |---|---|---|---|
-| `gameupc` (consultation) | 2 req/s, concurrence 1, single-flight par code | 1 (+1 HTTP courte) ; attente 8 s | file en pause (`Retry-After`, sinon 30 s) |
-| `gameupc-feedback` (votes) | 1 req/s | 6, exponentiel dès 30 s (~15 min) ; refus = `UnrecoverableError` | idem |
+| `gameupc` (consultation) | 1 job / 4 s (15/min), concurrence 1, single-flight par code | 1 (+1 HTTP courte) ; attente 8 s | file en pause (`Retry-After`, sinon 30 s) |
+| `gameupc-feedback` (votes) | 1 job / 12 s (5/min) | 6, exponentiel dès 30 s (~15 min) ; refus = `UnrecoverableError` | idem |
 | `bgg` (`thing`) | **1 req / 2 s**, aucune retentative HTTP | 4, exponentiel dès 10 s ; attente 6 s | file en pause sur **429 et 503** (`Retry-After`, sinon 60 s) |
+
+GameUPC reçoit donc au plus 20 jobs par minute, sous les ~30 requêtes par minute que son
+mainteneur indique. Un job fait un appel HTTP, deux sur une erreur (seconde chance courte d'une
+consultation, relecture du vote d'un job retenté). Dans une rafale de scans de codes absents du
+cache, seuls les deux premiers environ répondent dans l'attente de 8 s ; les suivants se terminent
+en tâche de fond, et leur réponse en cache sert le scan suivant.
 
 **Idempotence du vote** : `jobId` = sha1(code, jeu, version, votant) déduplique les envois en cours
 (double tap, rejeu réseau) ; `removeOnComplete: true` pour qu'un retour au premier choix (A, B, A)
@@ -210,7 +218,7 @@ Les trois files apparaissent dans `GET /v1/admin/queues`.
 | BGG ≤ 1 req / 2 s, backoff 429/503 | Limiter de la file `bgg`, une requête par job, pause de file sur 429/503 |
 | Cache long sur `thing` | 30 jours |
 | `boardgamegeek.com` sans `www` | URL construite par le client ; `BGG_BASE_URL` en `www.` **refusée au démarrage** |
-| Débit raisonnable vers GameUPC | 2 + 1 req/s, provisoire |
+| Débit raisonnable vers GameUPC | 15 + 5 jobs/min, sous les ~30 req/min indiquées par le mainteneur |
 | Logo « Powered by BGG » lié à boardgamegeek.com | **App** : sur l'écran de résultat (`pageUrl` fourni par candidat) |
 | Pas de redistribution par une API tierce publique | Routes sous `auth: 'user'`, servies à l'app seule |
 | Licence BGG non accordée | `BGG_API_TOKEN` vide : aucun appel, `details: null`, la résolution vit des données GameUPC |
@@ -236,24 +244,28 @@ d'après le format documenté (aucun appel BGG sans licence), à remplacer par u
 
 ## 8. Questions ouvertes
 
-1. **Clé de production GameUPC.** À demander par courriel. À faire préciser dans la même demande :
-   usage par une app gratuite (palier premium payant prévu plus tard), attribution attendue, une
-   clé par environnement ?
-2. **Quotas GameUPC.** Aucune limite publiée ; 2 + 1 req/s retenus par prudence. Demander la limite
-   réelle et la conduite attendue sur 429.
-3. **Vote de version.** Faut-il faire choisir l'édition ? Pour un utilisateur français, c'est elle
-   qui distingue l'EAN FR (Kingdomino : 3 versions françaises sur 60+, toutes à confiance 0).
-   Recommandation : oui, en option, versions de la langue de l'utilisateur et multilingues en tête.
-   À confirmer avec GameUPC : un vote de version compte-t-il aussi pour le jeu ?
-4. **Seuil de vérification en production** : un vote sur `/test`, « deux votes non contestés » selon
-   la démo. Conditionne le délai avant qu'un EAN FR devienne `verified` pour tous.
+1. **Clé de production GameUPC — accordée le 2026-11-18.** Réponse du mainteneur aux questions de
+   la demande : ni coût ni attribution, y compris avec le palier premium payant annoncé ; la même
+   clé vaut pour `/v1` et `/test`. Elle va dans `GAMEUPC_API_KEY` (Secret du déploiement, qui vise
+   `/v1`) ; sans `GAMEUPC_BASE_URL`, le client vise `/test`.
+2. **Quotas GameUPC — réglé le 2026-11-18.** Pas de limite à proprement parler, selon le
+   mainteneur ; au-delà d'environ 30 requêtes par minute, ses fournisseurs amont renvoient des
+   `429` et il répond avec les suggestions dont il dispose. Débit ramené à 20 jobs par minute
+   (§ 5) ; la pause de file sur `429` reste.
+3. **Vote de version.** Tranché le 2026-11-14 : le choix de l'édition est proposé **en option**,
+   versions de la langue de l'utilisateur et multilingues en tête. Pour un utilisateur français,
+   c'est elle qui distingue l'EAN FR (Kingdomino : 3 versions françaises sur 60+, toutes à
+   confiance 0). À confirmer avec GameUPC : un vote de version compte-t-il aussi pour le jeu ?
+4. **Seuil de vérification en production — réglé le 2026-11-18.** Un seul vote humain qui concorde
+   avec la recommandation de GameUPC suffit à passer un code en `verified` (la démo parlait de
+   « deux votes non contestés »).
 5. **Représentativité du serveur de test.** Les mesures du § 2 viennent de `/test`, vidé
    périodiquement ; à refaire sur `/v1` avec la clé de production.
-6. **RGPD.** Les choix partent chez GameUPC sous pseudonyme. Faut-il les retirer à la suppression du
-   compte ? Il faudrait alors garder la liste des votes par utilisateur, ce que `search` s'interdit ;
-   sans elle, le lien se rompt de fait avec l'identifiant. À trancher, et à mentionner dans
-   `legal/confidentialite.md`.
-7. **Licence BGG.** Page officielle « Using the XML API » (version du 2025-07-02) relue le
+6. **RGPD.** Tranché le 2026-11-14 : `search` ne garde **aucune liste de votes par utilisateur**.
+   Les choix partent chez GameUPC sous pseudonyme ; sans cette liste, le lien se rompt de fait avec
+   l'identifiant quand le compte est supprimé. Reste à faire : retirer les votes encore en file à la
+   suppression d'un compte, et le mentionner dans `legal/confidentialite.md`.
+7. **Licence BGG — pending.** Demande envoyée le 2026-11-14, réponse attendue. Page officielle « Using the XML API » (version du 2025-07-02) relue le
    2026-11-13, détail au § 3.1 du dossier : licence **non commerciale** demandée pour l'instant
    (app gratuite, personne physique), licence commerciale à obtenir avant le premium (en général
    gratuite jusqu'à 100 utilisateurs payants) ; appels serveur et cache recommandés ; un jeton par application,
@@ -263,8 +275,8 @@ d'après le format documenté (aucun appel BGG sans licence), à remplacer par u
    `cf.geekdo-images.com` (GameUPC les renvoie déjà), emplacement du logo.
 8. **Type de collection.** `game` (servi par `catalog-generic`) ou un futur `boardgame` ? Le code
    `game` est ambigu avec le jeu vidéo.
-9. **Premium.** Les deux routes sont ouvertes à tous (`premium: 'none'`), comme le reste de la
-   recherche. À confirmer.
+9. **Premium.** Tranché le 2026-11-14 : les deux routes restent ouvertes à tous
+   (`premium: 'none'`), comme le reste de la recherche.
 10. **Repli sans GameUPC.** Ni `stale` ni réponse : l'app propose la saisie manuelle. Une recherche
     texte BGG (`xmlapi2/search`) est possible une fois la licence obtenue ; non implémentée.
 11. **Compléments FR.** Partenariat MyLudo, flux affilié Philibert, GS1 ou Open Products Facts comme
