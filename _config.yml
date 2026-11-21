@@ -44,6 +44,7 @@ exclude:
   - audit-limitations-recherche-manga.md
   - etude-leviers-recherche-manga.md
   - dossier-jeux-de-societe-bgg-gameupc.md
+  - etude-archive-deploiement-constellation.md
   - private/
   - vendor/
   - Gemfile
