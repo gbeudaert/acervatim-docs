@@ -1,11 +1,15 @@
 # Cible — Découpage micro-services (un service par type de collection + partages)
 
-> Remonter : [INDEX.md](INDEX.md) · **Cible d'architecture non engagée** — document de travail, pas
-> une page du site public.
-> Dernière mise à jour : 2026-11-03. État : le monolithe `acervatim-backend` reste ce qui tourne ;
-> une implémentation de cette cible existe dans le dépôt local `acervatim/backend-services`
-> (versionné depuis le 2026-11-02, jamais poussé ni déployé). Ce document décrit la cible, pas
-> l'état de ce dépôt.
+> Remonter : [INDEX.md](INDEX.md) · **Cible d'architecture engagée le 2026-11-16** — document de
+> travail, pas une page du site public.
+> Dernière mise à jour : 2026-11-16.
+>
+> **Décision du 2026-11-16 : bascule complète de la production vers la constellation**, sans arrêt
+> à un palier intermédiaire. Le monolithe `acervatim-backend` (déployé le 2026-08-24) reste
+> ce qui tourne jusqu'à la bascule ; l'implémentation de cette cible est dans le dépôt
+> `acervatim/backend-services`, pas encore déployée. La séparation des comptes SQL par service est
+> reportée : un seul compte, une seule instance MariaDB, un schéma par service, à revoir selon
+> l'évolution de la charge. Ce document décrit la cible, pas l'état de ce dépôt.
 
 ## TL;DR
 
@@ -27,6 +31,16 @@ au repos** sur l'hôte applicatif, en plus de MariaDB et Redis — pour un volum
 aujourd'hui négligeable. Le phasage est donc conçu pour être **arrêtable à chaque palier** : M0–M2
 livrent l'essentiel du découplage à coût opérationnel nul, et s'arrêter à M5 (6 processus) ne
 condamne pas M6. Chaque passage de palier doit être justifié par une mesure (§4), pas par la cible.
+
+**Mesure du 2026-11-14, qui lève cette réserve pour la mémoire.** Les deux solutions ont tourné en
+images de production sur un poste de développement (amd64, Docker), avec le même parcours
+authentifié. Le monolithe occupe 121 Mo au repos et 130 Mo après le parcours. Les neuf services de
+la constellation totalisent 941 à 1 080 Mo de RSS additionné, ce qui confirme l'ordre de grandeur
+ci-dessus, mais 481 à 603 Mo de mémoire réelle (PSS) : leurs conteneurs partagent les pages du
+binaire Node de l'image de base commune. MariaDB (100 à 107 Mo) et Redis (10 Mo) pèsent autant dans
+les deux cas. L'hôte applicatif avait 7,1 Go disponibles le 2026-11-16 : la constellation en
+demanderait 0,6 à 1,1 Go de plus. La mesure n'a pas été refaite sur l'hôte ni sous Podman, et la
+latence n'a pas été mesurée.
 
 ---
 
