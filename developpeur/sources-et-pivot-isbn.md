@@ -266,7 +266,7 @@ Zones extraites → `BnfNotice` :
 | `454$h` | `sourceVolumeRange` | **Plage de tomes de l'édition source** (ex. `1-3`) → mapping inter-édition. |
 | `205$a` | `edition` | Mention d'édition (ex. `Éd. colossale`) ; absente = standard. |
 | `200$a` / `200$h` | `titleFr` / `volume` | Titre FR et n° de tome **du volume scanné** (`200$a` peut être le titre du *tome*, pas de la série — cf. Ki-oon). |
-| `461$t` (fallback `225$a`, `200$a`) | `seriesTitle` | **Titre de la série** (lien « fait partie de ») — clé d'énumération des tomes. |
+| `461$t`, sinon `225$a` ou `200$a` | `seriesTitle` | **Titre de la série** (lien « fait partie de ») — clé d'énumération des tomes. Sans `461`, le monolithe prend `225$a`, puis `200$a` ; la constellation ne prend `225$a` que s'il numérote le tome (cf. ci-dessous). |
 | `210$c` \| `214$c` | `publisherFr` | Éditeur FR (les notices RDA-fr récentes utilisent `214`). |
 | `700$a/$b` | `authors` | Auteur structuré (nom / prénom). |
 | `330$a` | `noteFr` | **Note de résumé en français** (souvent absente pour les mangas) → synopsis. |
@@ -487,11 +487,18 @@ paginé), puis pour chaque notice (`common/sources/bnf/edition-records.ts`) :
    `461`** (pré-notice, catalogage partiel), il suffit que **l'un de** `500$a` (titre uniforme),
    `200$a` (titre propre) ou `225$a` (collection) l'égale : la pré-notice d'un tome récent, dont
    `225$a` est la collection de l'éditeur (« Shonen manga »), reste membre par son `200$a`.
-2. **Édition** — une édition est le couple **(éditeur, `205$a`)**. Un `publisher` **explicite** est un
-   filtre strict sur l'éditeur normalisé (« Pika éd. » ≡ « Pika édition » ; « Pika roman » reste
-   distinct). **Absent**, l'éditeur **dominant** (le plus de tomes numérotés) ne gagne que les
-   **collisions** de numéro : les 2-en-1 France Loisirs de *L'attaque des titans* (« 11-12 ») ne
-   prennent plus la place des tomes 11 et 17 de Pika, mais un n° que seul un libellé voisin porte
+2. **Édition** — une édition est le couple **(éditeur, `205$a`)**. Un `publisher` **explicite** est
+   comparé à l'éditeur normalisé (« Pika éd. » ≡ « Pika édition » ; « Pika roman » reste distinct).
+   Le monolithe en fait un filtre strict. La constellation (`publisherFamilyOf`) garde aussi les
+   **libellés successifs** de cet éditeur : la BnF catalogue le libellé imprimé au dépôt légal, et
+   *Alice in Borderland* paraît sous « Delcourt-Akata » (T1-4), « Delcourt » (T5-8) puis « Éditions
+   Delcourt » (T9-18) ; le filtre strict n'en rendait que 4 tomes au scan du T1. Un libellé rejoint
+   celui demandé s'il ne porte **aucun** n° de tome déjà paru ; un autre catalogue reprend des n°
+   (romans « Ki-oon roman », 2-en-1 France Loisirs) et reste écarté. Le préfixe ISBN ne départage
+   pas : les romans Ki-oon partagent celui des mangas. La liste des éditions applique la même règle
+   et réunit ces libellés en une ligne. **Absent**, l'éditeur **dominant** (le plus de tomes
+   numérotés) ne gagne que les **collisions** de numéro : les 2-en-1 France Loisirs de *L'attaque
+   des titans* (« 11-12 ») ne prennent plus la place des tomes 11 et 17 de Pika, mais un n° que seul un libellé voisin porte
    comble le trou (changement de raison sociale en cours de série, Tonkam → Delcourt-Tonkam). Une
    pré-notice sans `205` n'est pas rangée en standard si son titre porte un mot-clé d'art **hors des
    mots du titre de série** (« Hellsing perfect edition » → perfect ; *Perfect World* reste standard).
@@ -509,6 +516,13 @@ tronquée ou qu'une page SRU a échoué. Chaque tome porte la date de création 
 > le tome scanné. La série exposée dans `metadata.scannedTome.seriesTitleFr` (= `461$t`) est donc la
 > clé à passer à `edition-mapping` — pas `titleFr`. Idem pour le n° de tome : lire `200$h` seul ratait
 > les éditeurs qui numérotent en `225$v`/`461$v`.
+>
+> **Sans `461`, `225$a` n'est pas toujours la série.** Sur une pré-notice, c'est la collection de
+> l'éditeur. Exemple : *The strange house* T2 (Kana, ISBN 9782505129035) n'a ni `461` ni `410`, son
+> `225$a` vaut « Big Kana » et son n° est en `200$h`. Le monolithe en fait une série « Big Kana », que
+> l'app remplit des autres titres de la collection. La constellation (`scanSeriesTitle`, service
+> `search`) ne prend `225$a` que s'il porte le n° du tome (`225$v` sans `200$h`, cas Ki-oon sans
+> `461`) et jamais quand il est repris en `410$t` (lien « collection ») ; sinon elle prend `200$a`.
 
 ### Ce que l'app fait des données par tome
 

@@ -224,7 +224,10 @@ recherche ni la bannière n'ont été essayés sur appareil contre le backend r�
   sans résultat, MAL n'est tenté qu'avec un jeton — jamais de 403 dans ce cas. Le repli ne joue
   qu'en **première page** et renvoie une seule page (`nextCursor: null`).
 - **Éditeur dominant limité aux collisions** : sans `publisher`, un autre libellé d'éditeur n'est
-  écarté que s'il porte un n° que le dominant a déjà ; un `publisher` explicite reste un filtre strict.
+  écarté que s'il porte un n° que le dominant a déjà ; un `publisher` explicite reste un filtre strict
+  dans le monolithe. Dans la constellation, il garde aussi ses libellés successifs, ceux qui ne
+  portent aucun de ses n° (*Alice in Borderland* : « Delcourt-Akata », « Delcourt », « Éditions
+  Delcourt »).
 - **File `mangadex` priorisée** : recherche, lecture par id et identification en priorité 1,
   jaquettes en priorité 10.
 - **Nouveautés premium mises en cache côté app** (`SeriesUpdatesCache`, 10 min par compte) : ouvrir

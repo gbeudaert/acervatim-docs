@@ -91,7 +91,10 @@ saisie → GET /v1/search?type=manga&q=   MangaDex, sans jeton (tri par suivis, 
   MangaDex a répondu sans résultat **et** un jeton MAL est résolu (sinon liste vide, jamais de 403),
   ou MangaDex est indisponible (chemin MAL historique).
 - **Énumération corrigée** (`common/sources/bnf/edition-records.ts`) : une édition = **(éditeur
-  normalisé, `205$a`)**. Un `publisher` explicite filtre strictement ; sans lui, l'éditeur
+  normalisé, `205$a`)**. Un `publisher` explicite filtre strictement dans le monolithe ; dans la
+  constellation, il garde aussi ses **libellés successifs**, ceux qui ne portent aucun de ses n°
+  (« Delcourt-Akata » puis « Delcourt », `publisherFamilyOf`), et la liste des éditions les réunit
+  en une ligne ; un catalogue qui reprend ses n° (romans, 2-en-1) reste écarté. Sans lui, l'éditeur
   **dominant** ne gagne que les **collisions** de n° (les 2-en-1 France Loisirs ne remplacent plus les
   tomes Pika ; un n° que seul un libellé voisin porte comble le trou). Appartenance d'une notice :
   **`461$t` fait autorité** quand il existe ; sans `461`, **l'un des** `500$a`, `200$a`, `225$a` égal
