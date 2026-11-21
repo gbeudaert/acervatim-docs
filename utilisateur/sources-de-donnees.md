@@ -8,22 +8,81 @@ nav_order: 3
 # D'où viennent les informations de vos collections
 
 Acervatim fonctionne **hors-ligne par défaut** : vos collections vivent sur votre appareil, sans
-compte ni réseau. Quand vous le souhaitez (et que vous êtes connecté), l'application peut
-**enrichir** un élément — récupérer automatiquement sa pochette, son synopsis, ses auteurs, sa date,
-etc. — en interrogeant des **bases de données spécialisées** reconnues.
+compte ni réseau. Quand vous le souhaitez, l'application peut **pré-remplir** une fiche (pochette,
+synopsis, auteurs, date…) en interrogeant des **bases de données spécialisées**. C'est toujours le
+serveur Acervatim qui interroge ces bases, jamais l'application directement.
 
-Cette page explique **quelles sources** sont utilisées et **ce que ça implique pour votre vie privée**.
-
-## Les sources par type de collection
-
-| Type | Source(s) | Ce qu'on y trouve |
-|---|---|---|
-| **Vinyles / disques** | [Discogs](https://www.discogs.com) | Album, artiste(s), année, pochette, label — recherche par texte **ou par code-barres** (EAN). |
-| **Mangas** | [MangaDex](https://mangadex.org) + [Bibliothèque nationale de France (BnF)](https://catalogue.bnf.fr), avec [MyAnimeList](https://myanimelist.net) et [Google Books](https://books.google.com) en secours | L'**œuvre** (synopsis **en français**, note, genres, nombre de tomes, jaquettes) côté MangaDex ; l'**édition française** (éditeur, tome, ISBN) côté BnF ; MyAnimeList prend le relais si MangaDex ne reconnaît pas la série, Google Books complète les jaquettes manquantes — recherche **par ISBN** ou **par titre**. |
-| **Films** | [TMDB](https://www.themoviedb.org) | Titre, affiche, année, synopsis. |
+Cette page liste **toutes les sources**, type de collection par type de collection : ce que chacune
+apporte, à quel moment elle intervient, et où elle en est.
 
 > L'enrichissement est **optionnel** et **à votre initiative** : l'application reste pleinement
 > utilisable sans jamais interroger ces sources.
+
+## Où en est chaque source
+
+| Statut | Signification |
+|---|---|
+| **en service** | Le serveur Acervatim l'interroge aujourd'hui. |
+| **prête** | Le serveur sait l'interroger, mais ce type de collection n'est pas encore dans l'application, ou le serveur qui la porte n'est pas encore en production. |
+| **pending** | En attente d'une réponse ou d'un accord : clé d'accès, licence, autorisation d'usage. |
+
+## Les sources par type de collection
+
+### Vinyles
+
+| Source | Ce qu'elle apporte | Quand elle intervient | Statut |
+|---|---|---|---|
+| [Discogs](https://www.discogs.com) | Album, artistes, année, label, pays, format, numéro de catalogue, pochette | Scan du code-barres ; recherche par titre ou par artiste, avec les pressages regroupés par album | en service |
+
+Discogs demande un accès : reliez votre compte Discogs dans **Réglages → Gérer les collections →
+Gérer les sources**, ou utilisez l'accès partagé inclus avec premium.
+
+### Mangas
+
+| Source | Ce qu'elle apporte | Quand elle intervient | Statut |
+|---|---|---|---|
+| [Bibliothèque nationale de France (BnF)](https://catalogue.bnf.fr) | Le tome et son **édition française** : titre de série, numéro, éditeur, ISBN, titre d'origine ; la liste de tous les tomes d'une édition | Scan d'un ISBN ; choix de l'édition française quand vous ajoutez une série par son titre ; recherche des nouveaux tomes | en service |
+| [MangaDex](https://mangadex.org) | La **série** : synopsis en français, note, genres, nombre de tomes, **jaquette de chaque tome** | Scan d'un ISBN ; recherche d'une série par son titre | en service |
+| [MyAnimeList](https://myanimelist.net) | La série, quand MangaDex ne la reconnaît pas (résumé en anglais) | En secours seulement, si vous avez relié votre compte MyAnimeList ou si vous êtes premium | en service |
+| [Google Books](https://books.google.com) | Une jaquette ou un résumé de tome qui manque ; le titre d'un livre que la BnF ne connaît pas | En secours seulement, au scan et à l'affichage des tomes | en service |
+
+MangaDex, la BnF et Google Books ne demandent aucun accès : le scan d'un manga s'enrichit même sans
+compte relié.
+
+### Films
+
+| Source | Ce qu'elle apporte | Quand elle intervient | Statut |
+|---|---|---|---|
+| [TMDB (The Movie Database)](https://www.themoviedb.org) | Titre, affiche, année, synopsis | Recherche d'un film par son titre | prête : le serveur sait chercher un film, l'application n'a pas encore de collection de films |
+
+### LEGO
+
+| Source | Ce qu'elle apporte | Quand elle intervient | Statut |
+|---|---|---|---|
+| [Rebrickable](https://rebrickable.com) | Le catalogue des sets : numéro, nom, année, thème, nombre de pièces et de figurines, image | Recherche d'un set par numéro ou par nom (le filtre par thème viendra plus tard) | prête : le catalogue est importé chaque jour par le nouveau serveur, pas encore en production |
+| [Brickset](https://brickset.com) | Le code-barres imprimé sur chaque boîte | Scan d'une boîte | pending : accord de Brickset pour cet usage |
+
+Un code-barres que Brickset ne connaît pas encore, souvent celui d'un set tout juste sorti, n'est
+redemandé qu'au bout de 7 jours. En attendant, cherchez le set par le numéro imprimé sur la boîte.
+
+Les images des sets appartiennent au groupe LEGO. Leur affichage dans une application qui aura un
+palier payant reste à trancher : **pending**.
+
+### Jeux de société
+
+| Source | Ce qu'elle apporte | Quand elle intervient | Statut |
+|---|---|---|---|
+| [GameUPC](https://gameupc.com) | Le jeu qui correspond à un code-barres de boîte | Scan d'une boîte | prête : clé d'accès de production obtenue, le nouveau serveur n'est pas encore en production |
+| [BoardGameGeek](https://boardgamegeek.com) | La fiche du jeu : nom et titres français connus, année, auteurs, éditeurs, nombre de joueurs, durée, âge, description, image, note | Après le scan, une fois le jeu identifié | pending : licence demandée |
+
+Quand vous choisirez le bon jeu parmi plusieurs propositions, ce choix sera renvoyé à GameUPC, sous
+un pseudonyme qui ne permet pas de vous identifier, pour améliorer la reconnaissance des boîtes
+françaises. L'application affichera le logo « Powered by BGG », lié à la fiche du jeu.
+
+### Livres et jeux vidéo
+
+Le serveur sait stocker ces deux types de collection, mais aucune source ne les enrichit pour
+l'instant, et l'application ne les propose pas encore.
 
 ## Scanner un manga : retrouver la série et tous ses tomes
 
@@ -36,10 +95,11 @@ ISBN, Acervatim combine **plusieurs sources complémentaires**, chacune avec son
    note, genres, nombre de tomes, et la **jaquette de chaque tome** (souvent celle de l'édition
    française). C'est la source principale ;
 3. **MyAnimeList** — n'est sollicité **qu'en secours**, si MangaDex ne reconnaît pas la série ;
-4. **Google Books** — complète une **jaquette de tome** que MangaDex n'aurait pas.
+4. **Google Books** — complète une **jaquette de tome** que MangaDex n'aurait pas, et donne le titre
+   d'un livre que la BnF ne connaît pas encore.
 
 Acervatim vous propose alors la série pour **valider les tomes** d'un coup, chaque tome avec sa
-propre jaquette. Ce scan fonctionne **même sans compte connecté** : MangaDex et la BnF sont des
+propre jaquette. Ce scan fonctionne **même sans compte relié** : MangaDex et la BnF sont des
 sources ouvertes.
 
 ### Comment l'app retrouve la bonne série
@@ -78,7 +138,8 @@ traduits). Vous pouvez toujours le **modifier** après coup.
 ## Ajouter une série par son titre {#ajouter-une-serie-par-son-titre}
 
 Pas besoin de posséder un tome pour ajouter une série — c'est tout l'intérêt d'une wishlist.
-*Fonctionnalité développée, pas encore publiée.*
+*Fonctionnalité prête dans l'application ; elle sera disponible quand le serveur de production aura
+été mis à jour.*
 
 1. **Vous tapez le titre**, en français ou dans sa version originale (« L'Attaque des Titans »
    comme « Shingeki no Kyojin »). La recherche passe par **MangaDex**, sans compte à relier.
@@ -95,17 +156,19 @@ Pas besoin de posséder un tome pour ajouter une série — c'est tout l'intér�
 Quand vous ouvrez une série encore en cours de parution, Acervatim vérifie (au plus une fois par
 semaine) si de nouveaux tomes ont paru et vous propose de les ajouter à la wishlist — sans rien
 ajouter d'office. Ces tomes apparaissent **quelques semaines après leur sortie** : c'est le temps
-qu'il faut à la BnF pour les cataloguer après le dépôt légal.
+qu'il faut à la BnF pour les cataloguer après le dépôt légal. Comme l'ajout par titre, cette
+vérification attend la mise à jour du serveur de production.
 
 ## Et votre vie privée ?
 
 Acervatim est conçu **privacy by design**. Concernant ces sources de données :
 
-- Les recherches portent sur **l'objet** (un disque, un livre), **jamais sur vous**. Aucun nom, email
-  ni identifiant personnel n'est transmis à Discogs, MangaDex, MyAnimeList, la BnF, Google Books ou TMDB.
-- En mode **connecté**, les sources sont interrogées avec **vos propres jetons d'accès** (que vous
-  renseignez dans les réglages) ; en **premium**, ce sont les jetons Acervatim, gardés côté serveur,
-  qui sont utilisés à votre place.
+- Les recherches portent sur **l'objet** (un disque, un livre, une boîte), **jamais sur vous**.
+  Aucun nom, email ni identifiant personnel n'est transmis aux sources.
+- Pour les sources qui demandent un accès (Discogs, MyAnimeList, TMDB), le serveur utilise **vos
+  propres jetons d'accès**, que vous reliez dans les réglages ; en **premium**, ce sont les jetons
+  Acervatim, gardés côté serveur, qui sont utilisés à votre place. Les autres sources ne demandent
+  aucun accès.
 - Vous restez **maître de vos données** : ce qui est récupéré sert uniquement à pré-remplir une fiche,
   que vous pouvez modifier ou ignorer.
 
@@ -114,6 +177,6 @@ confidentialité](../legal/confidentialite.md).
 
 ## Pour les développeurs
 
-Le fonctionnement technique (d'où vient chaque champ, le « pivot » ISBN → BnF → MangaDex → MAL, le
-format des réponses) est documenté côté développeur :
-[Sources de données & pivot ISBN](../developpeur/sources-et-pivot-isbn.md).
+Le fonctionnement technique (d'où vient chaque champ, les débits, les accès, le « pivot »
+ISBN → BnF → MangaDex → MyAnimeList, le format des réponses) est documenté côté développeur :
+[Sources de données](../developpeur/sources-et-pivot-isbn.md).

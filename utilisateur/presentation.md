@@ -98,7 +98,7 @@ Le scan utilise la caméra et fonctionne **entièrement hors-ligne** (reconnaiss
 
 1. Visez le code-barres EAN/UPC du disque ;
 2. si le disque est **déjà dans votre collection**, l'application vous l'indique et ouvre sa fiche (pas de doublon possible) ;
-3. sinon, si une source externe est configurée (compte Discogs) et que vous êtes connecté à internet, la fiche est **pré-remplie automatiquement** (titre, artiste, année, jaquette…) ;
+3. sinon, en mode connecté, la fiche est **pré-remplie automatiquement** (titre, artiste, année, jaquette…) depuis Discogs — à condition d'avoir relié votre compte Discogs ou d'être premium ;
 4. sans connexion, le formulaire s'ouvre avec le code-barres pré-rempli — complétez à la main.
 
 Pour le détail des sources interrogées, voir [D'où viennent les informations](sources-de-donnees.md).
@@ -166,12 +166,12 @@ Vos données ne sont jamais captives :
 
 - **Thème** : trois modes — *Vert d'eau* (couleur de marque, par défaut), *Adapté au système* (couleurs de votre fond d'écran, Android 12+), *Expressif*. Tous existent en clair et en sombre.
 - **Albums multi-artistes** : une entrée par artiste, ou une seule sous l'artiste principal.
-- **Comptes & sources** : connexion des sources de métadonnées externes (Discogs pour le vinyle), avec indication claire de ce qui est configuré.
+- **Gérer les collections** : pour chaque type de collection, l'afficher ou non dans le menu, relier ses sources (Discogs pour le vinyle, MyAnimeList pour le manga), le synchroniser et choisir son affichage. Les sources sans jeton (MangaDex, BnF) sont indiquées comme telles.
 
 ## Confidentialité et permissions
 
 - Aucune permission n'est demandée au lancement. La **caméra** n'est demandée qu'au premier scan ou à la première photo de jaquette ; l'accès aux **images** qu'au premier import depuis la galerie.
 - En mode hors-ligne, l'application **ne collecte aucune donnée** et n'émet aucune requête réseau.
-- Les appels réseau (recherche Discogs, et demain le serveur Acervatim) sont **toujours déclenchés explicitement** par vous — jamais en arrière-plan.
+- Les appels réseau passent tous par le serveur Acervatim, jamais directement vers une base externe, et sont **toujours déclenchés par une action** de votre part : scan, recherche, synchronisation.
 
 Détail du traitement des données : [politique de confidentialité](../legal/confidentialite.md).

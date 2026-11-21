@@ -5,9 +5,10 @@
 ## Identité
 
 - **Package** : `app.acervatim` · **Nom** : Acervatim
-- **Stack** : Kotlin (JVM 17), Jetpack Compose + Material 3, Hilt, Room, Retrofit + kotlinx-serialization, DataStore, CameraX + ML Kit Barcode (modèle embarqué offline), WorkManager (sync).
-- **SDK** : minSdk 24, compile/target 34. Build : Gradle Kotlin DSL + version catalog `gradle/libs.versions.toml`.
-- **Modèle** : offline-first. Room est la vérité locale ; le backend est optionnel (mode connecté = sync + recherche externe + premium).
+- **Stack** : Kotlin, Jetpack Compose + Material 3, Hilt, Room, Retrofit + kotlinx-serialization, DataStore, CameraX + ML Kit Barcode (modèle embarqué offline), WorkManager (sync).
+- **SDK et versions** : `app/build.gradle.kts` (minSdk, compileSdk, targetSdk, versionName) et version catalog `gradle/libs.versions.toml` font foi ; rien n'est recopié ici. Build : Gradle Kotlin DSL.
+- **Modèle** : offline-first. Room est la vérité locale ; le backend est optionnel (mode connecté = recherche externe ; premium = sync + partage).
+- **Types de collection** : `VINYL` et `MANGA` (`domain/model/CollectionType.kt`) ; film puis LEGO sont les prochains.
 
 ## Racine des sources
 

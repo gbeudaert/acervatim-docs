@@ -1,7 +1,7 @@
 # « Où trouver X ? » — table de lookup rapide
 
 > Remonter : [../INDEX.md](../INDEX.md) · Point d'entrée le plus rapide pour un agent : chercher son intention ici, ouvrir directement le fichier cible.
-> Préfixes : `app:` = `acervatim-app/app/src/main/java/app/acervatim/` · `be:` = `acervatim-backend/src/`
+> Préfixes : `app:` = `acervatim-app/app/src/main/java/app/acervatim/` · `be:` = `acervatim-backend/src/` (monolithe, en production) · `svc:` = `acervatim/backend-services/` (constellation, cible)
 
 ## Par intention
 
@@ -17,12 +17,18 @@
 | Ajouter une source externe / un adapter | `be:oauth/providers/*.adapter.ts` + `be:common/sources/` | [transverse/sources-externes.md](sources-externes.md) |
 | Toucher au repli quand la BnF ignore l'ISBN | `be:oauth/providers/mal.adapter.ts` (`googleBooksPivot`) + `be:common/sources/title-ladder.ts` | [transverse/sources-externes.md](sources-externes.md) § repli Google Books |
 | Comprendre un flux complet (scan, sync, premium…) | — | [transverse/flux-metier.md](flux-metier.md) |
-| Comprendre le découpage en services / la cible micro-services | — | [backend/architecture-microservices.md](../backend/architecture-microservices.md) (**cible non engagée** ; implémentation non déployée dans le dépôt local `acervatim/backend-services`) |
+| Comprendre le découpage en services / la cible micro-services | — | [backend/architecture-microservices.md](../backend/architecture-microservices.md) (**cible engagée le 2026-11-16**, bascule complète décidée ; implémentation non déployée dans `acervatim/backend-services`, GitHub `acervatim-services`) · carte des services : [../INDEX.md](../INDEX.md) § Carte de la constellation |
 | Toucher auth / JWT / identité | `be:auth/`, `be:common/guards/jwt-auth.guard.ts` ; `app:data/remote/auth/` | [backend/securite-et-privacy.md](../backend/securite-et-privacy.md) |
 | Lancer le backend / une migration / les tests | `acervatim-backend/scripts/dev.ps1` | [backend/operations-dev.md](../backend/operations-dev.md) |
 | Builder/tester l'app | `.\gradlew.bat assembleDebug / test / lint` | [conventions.md](../conventions.md) |
 | Changer l'identité d'une variante app (package, nom, icône, URL backend) | `acervatim-app/app/build.gradle.kts` (buildTypes) + `app/src/debug/` | [developpeur/build-app-locale.md](../../developpeur/build-app-locale.md) |
 | Mettre à jour la doc publique (humains) | dépôt `acervatim-docs/` (page concernée) | [conventions.md](../conventions.md) § où documenter |
+| Toucher à une route dans la constellation (routage, premium, débit) | `svc:gateway/src/routing/route-table.ts` puis le service cible | `svc:gateway/README.md` |
+| Toucher au CRUD collections/items/nœuds dans la constellation | `svc:catalog-core/src/` (compilé dans les trois catalogs) | `svc:catalog-core/README.md` |
+| Toucher au catalogue LEGO | `svc:rebrickable-data/src/` (`import/`, `brickset/`, `catalog/`) | `svc:rebrickable-data/README.md` · [transverse/sources-externes.md](sources-externes.md) § LEGO |
+| Toucher au scan d'un jeu de société | `svc:search/src/search/boardgame/` + `svc:search/src/sources/{gameupc,bgg}/` | [backend/gameupc-bgg.md](../backend/gameupc-bgg.md) |
+| Déployer la constellation, reprendre les données du monolithe | `svc:deploy/` · `svc:db/reprise/` | `svc:deploy/README.md` · `svc:db/reprise/README.md` |
+| Suppression de compte dans la constellation (saga RGPD) | `svc:identity/src/` | `svc:identity/README.md` § 2 |
 
 ## Par mot-clé
 
@@ -55,7 +61,7 @@
 | Recherche **texte** Discogs, choisir le bon pressage | `be:oauth/providers/discogs.adapter.ts` (`mapSearchResult`) — cf. [recherche-textuelle-discogs.md](../backend/recherche-textuelle-discogs.md) |
 | Ajouter un disque **sans code-barres** (recherche par titre) | `app:ui/search/` · `app:domain/usecase/SearchExternalByTextUseCase.kt` · `app:domain/model/PressingGroup.kt` (regroupement par `masterId`) |
 | Erreur de recherche externe rendue actionnable (403 jeton, réseau, 429) | `app:domain/model/ExternalSearchFailure.kt` — traduite dans `app:data/remote/search/ExternalSearchRepositoryImpl.kt` |
-| Ajouter une **série manga** sans en posséder un tome (recherche par titre) | Branches `feat/manga-recherche-serie` : `app:ui/series/SeriesSearch{Screen,ViewModel}.kt` · `app:domain/usecase/SearchMangaSeriesUseCase.kt` · `app:domain/model/SeriesSearch.kt` · `ImportScannedSeriesUseCase.importFromSearch` · `be:oauth/providers/mal.adapter.ts` (`search` → MangaDex) · `be:search/search.service.ts` (`listEditions`) — cf. [spec-macro-import-serie-manga.md](../../spec-macro-import-serie-manga.md) |
+| Ajouter une **série manga** sans en posséder un tome (recherche par titre) | `app:ui/series/SeriesSearch{Screen,ViewModel}.kt` · `app:domain/usecase/SearchMangaSeriesUseCase.kt` · `app:domain/model/SeriesSearch.kt` · `ImportScannedSeriesUseCase.importFromSearch` · `be:oauth/providers/mal.adapter.ts` (`search` → MangaDex) · `be:search/search.service.ts` (`listEditions`) — cf. [spec-macro-import-serie-manga.md](../../spec-macro-import-serie-manga.md) |
 | Édition d'une série (éditeur + `205$a`), notices BnF, pré-notices | `be:common/sources/bnf/edition-records.ts` · `app:domain/model/EditionKey.kt` |
 | Nouveaux tomes d'une série en cours (rattrapage) | `be:search/watch/` (file `edition-watch`, `GET /v1/series-updates`) · `app:domain/usecase/SeriesCatchUpUseCase.kt` · `app:domain/model/SeriesCatchUp.kt` · `app:ui/series/NewVolumesBanner.kt` · `app:data/local/settings/DataStoreSeriesCatchUpStore.kt` |
 | Éditions d'une série (standard / colossale), mention `205$a` | `be:common/sources/bnf/bnf.service.ts` (`enumerateEdition`, filtre `rec205`) · `app:domain/model/MangaExtras.kt` (`KEY_EDITION`) |

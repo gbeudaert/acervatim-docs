@@ -84,8 +84,8 @@ Trois assouplissements côté serveur, tous sans migration :
    item peut les changer. Sans ça, un tome orphelin ou un hors-série serait rejeté, et un
    changement de série resterait local : le miroir dériverait en silence.
 
-Reste **entièrement côté app** : lever le filtre `VINYL` de `SyncManagerImpl`, pousser les séries
-avant les tomes, et mémoriser le `remoteId` du nœud. Cf.
+Le versant app est **livré** depuis le 2026-08-24 (`61ad6ea`) : le filtre `VINYL` de `SyncManagerImpl`
+est levé, les séries sont poussées avant les tomes et le `remoteId` du nœud est mémorisé. Cf.
 [../app/reseau-sync-compte.md](../app/reseau-sync-compte.md).
 
 ## Décisions prises en S1bis

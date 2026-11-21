@@ -8,9 +8,10 @@
 > **Amendé le 2026-10-27** d'après [etude-leviers-recherche-manga.md](etude-leviers-recherche-manga.md) :
 > recherche par MangaDex, édition identifiée par (éditeur, mention), séries en cours tranchées,
 > sprints SD3 et AD3.
-> **Implémenté le 2026-11-02** (SD1, SD2, SD3, AD1, AD2, AD3) sur les branches
-> `feat/manga-recherche-serie` de `acervatim-backend` et `acervatim-app` — **non commité, non
-> fusionné**. État, écarts retenus et ordre de déploiement : § « Implémentation ».
+> **Implémenté le 2026-11-02** (SD1, SD2, SD3, AD1, AD2, AD3), **fusionné dans `main` le 2026-11-14**
+> (`acervatim-backend`, `acervatim-app`, et la constellation pour SD1 et SD3), **pas encore en
+> production** : le serveur de production a été construit fin août 2026. État, écarts retenus et ordre
+> de déploiement : § « Implémentation ».
 
 ## Le besoin
 
@@ -202,8 +203,8 @@ afficher son crédit dans l'app (étude § 6).
 
 ## Implémentation (2026-11-02)
 
-Branches `feat/manga-recherche-serie` (backend depuis `main`, app depuis `feat/ad1-recherche-textuelle`),
-**non commitées, non fusionnées**. Validation : backend 56 suites / 629 tests unitaires + e2e touchés
+Développé sur les branches `feat/manga-recherche-serie` (backend depuis `main`, app depuis
+`feat/ad1-recherche-textuelle`), **fusionnées dans `main` le 2026-11-14**. Validation au 2026-11-02 : backend 56 suites / 629 tests unitaires + e2e touchés
 (Redis isolé), `tsc` sans erreur nouvelle ; app 450 tests unitaires, `assembleDebug` OK. Ni l'écran de
 recherche ni la bannière n'ont été essayés sur appareil contre le backend réel.
 

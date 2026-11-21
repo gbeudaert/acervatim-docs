@@ -17,7 +17,7 @@ ses données.
 | `applicationId` | `app.acervatim` | `app.acervatim.dev` |
 | Nom affiché | Acervatim | **Acervatim Dev** |
 | Icône | fond vert | fond **orange** (API 26+) |
-| `versionName` | `0.8.1` | `0.8.1-dev` |
+| `versionName` | celui de `app/build.gradle.kts` | le même, suffixé `-dev` |
 | Signature | clé release / Play App Signing | clé debug (`~/.android/debug.keystore`) |
 | Backend visé | `https://api.acervatim.app/` | idem par défaut, surchargeable (voir plus bas) |
 
@@ -53,7 +53,7 @@ Vérifier ce qui a été produit :
 
 ```powershell
 aapt dump badging app\build\outputs\apk\debug\app-debug.apk | Select-Object -First 1
-# package: name='app.acervatim.dev' versionCode='6' versionName='0.8.1-dev'
+# package: name='app.acervatim.dev' versionCode='<n>' versionName='<version>-dev'
 ```
 
 ## Viser un backend local

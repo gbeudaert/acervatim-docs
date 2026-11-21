@@ -23,9 +23,11 @@ l'application en local.
 
 - **Enrichissement au scan ou à la recherche** : scanner un disque ou un manga et récupérer
   automatiquement ses métadonnées depuis des bases spécialisées, avec les jetons que vous avez
-  renseignés dans **Réglages → Comptes & sources**.
+  renseignés dans **Réglages → Gérer les collections → Gérer les sources**. Certaines sources
+  (MangaDex, la BnF) ne demandent aucun jeton.
 - **Synchronisation** (palier premium) : vos collections sont sauvegardées côté serveur, sans
-  limite, et peuvent être partagées en lecture seule avec d'autres membres.
+  limite, et peuvent être partagées en lecture seule avec d'autres membres. Le premium s'obtient
+  aujourd'hui par un code d'invitation ; l'achat dans l'application n'est pas encore ouvert.
 - **Compte** : export de vos données (portabilité) et suppression de compte en un geste.
 
 ## Ce qui reste toujours vrai

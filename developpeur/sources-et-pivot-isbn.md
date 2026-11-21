@@ -1,30 +1,71 @@
 ---
-title: Sources de données & pivot ISBN
+title: Sources de données
 layout: default
 parent: Développeur
 nav_order: 8
 ---
 
-# Sources de données & pivot ISBN → MangaDex (MAL en repli)
+# Sources de données, type par type, et pivot ISBN manga
 
-D'où viennent les métadonnées renvoyées par `GET /v1/search`, et comment le backend résout un **ISBN
-de manga** en une œuvre. Source de vérité = le code du dépôt `acervatim-backend` ; cette page en donne
-la vue normalisée.
+D'où viennent les métadonnées que le serveur renvoie, comment chaque source est appelée, et où elle
+en est. La seconde moitié de la page détaille le cas le plus complexe : la résolution d'un **ISBN de
+manga** en une série. Le code fait foi : le monolithe `acervatim-backend` (`src/common/sources/`,
+`src/oauth/providers/`) pour ce qui tourne en production, et la constellation `acervatim-services`
+(services `search` et `rebrickable-data`) pour la cible décidée le 16 novembre 2026.
 
-> **Inversion du pivot (source principale = MangaDex).** Le chemin nominal du scan manga est
-> **BnF → MangaDex → MAL en repli**. MangaDex identifie l'œuvre (titre romaji/FR + auteur), fournit le
-> **synopsis en français**, la note, le nombre de tomes, les genres, les **jaquettes par tome** et
-> surtout le **`links.mal`** (l'id MyAnimeList, porté en `metadata` pour la sync bibliothèque). MAL
-> n'est appelé **qu'en repli** quand MangaDex n'identifie pas. Auparavant l'identité venait de MAL par
-> recherche floue ; cette section décrit le nouvel ordre et conserve le repli MAL tel quel.
+**Statuts** : **en service** = appelée par la production ; **prête** = branchée dans le code, pas en
+production ou sans écran dans l'application ; **pending** = attend une réponse ou un accord d'un
+tiers.
+
+## Toutes les sources
+
+| Source | Collection | Rôle | Accès | Débit sortant | Statut |
+|---|---|---|---|---|---|
+| [Discogs](https://www.discogs.com) ([API](https://www.discogs.com/developers)) | vinyle | Recherche par code-barres et par texte, détail d'un pressage | Compte Discogs de l'utilisateur (OAuth 1.0a) ; en premium, jeton personnel Acervatim (`DISCOGS_ACERVATIM_TOKEN`) | File `discogs` : 1 requête/s (Discogs : environ 60/min par identité) | en service |
+| [BnF](https://catalogue.bnf.fr) ([SRU](https://api.bnf.fr/fr/api-sru-catalogue-general)) | manga | ISBN → tome et édition française ; liste des tomes d'une édition ; éditions d'une série ; tomes catalogués depuis une date | Aucun | File `bnf` : 10 requêtes/s, 2 en parallèle | en service |
+| [MangaDex](https://mangadex.org) ([API](https://api.mangadex.org/docs/)) | manga | Identité de la série, synopsis français, jaquettes par tome, recherche par titre | Aucun | File `mangadex` : 4 requêtes/s (MangaDex : environ 5/s par adresse IP) | en service |
+| [MyAnimeList](https://myanimelist.net) ([API](https://myanimelist.net/apiconfig/references/api/v2)) | manga | Repli d'identité et de recherche quand MangaDex échoue | Compte de l'utilisateur (OAuth 2 PKCE) ; en premium, `MAL_CLIENT_ID` | File `mal` : 3 requêtes/s, 2 en parallèle | en service |
+| [Google Books](https://books.google.com) ([API](https://developers.google.com/books)) | manga | Repli de jaquette et de résumé par tome ; titre d'un ISBN inconnu de la BnF | Clé facultative (`GOOGLE_BOOKS_API_KEY`) | File `gbooks` : 4 requêtes/s, 1 en parallèle | en service |
+| [TMDB](https://www.themoviedb.org) ([API](https://developer.themoviedb.org/docs)) | film | Recherche et détail d'un film | Clé personnelle de l'utilisateur (`PUT /v1/sources/tmdb/token`) ; en premium, `TMDB_API_KEY` | File `tmdb` : 20 requêtes/s, 4 en parallèle | prête : pas de collection film dans l'application |
+| [Rebrickable](https://rebrickable.com) ([téléchargements](https://rebrickable.com/downloads/)) | LEGO | Catalogue des sets, thèmes, figurines, images | Aucun : fichiers CSV publics | Un import par jour, 03:00 UTC | prête : service `rebrickable-data`, pas en production |
+| [Brickset](https://brickset.com) ([API](https://brickset.com/article/52664/api-version-3-documentation)) | LEGO | Codes-barres EAN et UPC des boîtes | Clé `BRICKSET_API_KEY` | Brickset autorise 100 appels par jour sur une clé gratuite ; le code en consomme 90 au plus (`BRICKSET_DAILY_CALL_BUDGET`), un par code scanné absent du cache | pending : clé reçue le 20 novembre 2026, accord pour un usage commercial à demander |
+| [GameUPC](https://gameupc.com) | jeu de société | Code-barres → identifiant BoardGameGeek ; retour des choix des utilisateurs | Clé `GAMEUPC_API_KEY` (production) ; serveur de test en développement | Files `gameupc` (15/min) et `gameupc-feedback` (5/min), sous les ~30 requêtes/min que GameUPC indique | prête : clé de production accordée le 18 novembre 2026 ; service `search`, pas en production |
+| [BoardGameGeek](https://boardgamegeek.com) ([XML API2](https://boardgamegeek.com/wiki/page/BGG_XML_API2)) | jeu de société | Fiche d'un jeu | Jeton d'application `BGG_API_TOKEN`, vide : aucun appel ne part | File `bgg` : 1 requête toutes les 2 s ; cible : `bgg-data` seul appelant, 1 toutes les 5 s | pending : licence demandée |
+
+Les livres (`book`) et les jeux vidéo (`game`) sont des types de collection du serveur sans aucune
+source : saisie manuelle seulement, et aucun écran dans l'application.
+
+Chaque appel sortant passe par une **file BullMQ** propre à la source (Redis) : le limiteur borne le
+débit tous utilisateurs confondus, et les requêtes identiques simultanées n'en font qu'une. Les
+réponses vont dans un **cache partagé** indexé sur la requête publique, jamais sur l'utilisateur.
+
+## Conditions d'usage et palier premium
+
+Acervatim est aujourd'hui gratuit, édité par une personne physique, sans publicité : un usage non
+commercial. Le palier premium, payant, changera ce statut pour plusieurs sources. Ce tableau
+recense ce qui a été relu et ce qui devra être obtenu avant le lancement du premium.
+
+| Source | Ce que disent les conditions | Avant le premium | Statut |
+|---|---|---|---|
+| Discogs | [Conditions de l'API](https://support.discogs.com/hc/en-us/articles/360009334593) : licence limitée, non exclusive et révocable | Relire les conditions pour un service payant | à vérifier |
+| BnF | [Conditions de réutilisation](https://www.bnf.fr/fr/conditions-de-reutilisations-des-donnees-de-la-bnf) : métadonnées sous Licence Ouverte, citation de la source obligatoire ; l'extraction d'une part substantielle à des fins commerciales est encadrée | Vérifier que l'interrogation à la demande n'est pas concernée | à vérifier |
+| MangaDex | [Politique d'usage](https://api.mangadex.org/docs/2-limitations/) : pas de publicité ni de service payant, sauf exception accordée ; créditer MangaDex | Obtenir une exception écrite | à demander |
+| MyAnimeList | Accord de licence accepté à l'enregistrement du client, non relu | Relire l'accord | à vérifier |
+| Google Books | [Conditions](https://developers.google.com/books/terms) : faire payer l'usage de l'application demande un accord écrit de Google ; [règles de marque](https://developers.google.com/books/branding) : attribution à Google Books | Obtenir l'accord, ou ne pas servir Google Books dans le palier payant | à demander |
+| TMDB | [Conditions de l'API](https://www.themoviedb.org/api-terms-of-use) : attribution obligatoire ; usage commercial seulement sous accord écrit (page à relire en entier) | Obtenir l'accord avant d'utiliser la clé Acervatim pour le premium | à demander |
+| Rebrickable | Conditions relues le 2 novembre 2026 : usage commercial autorisé, automatisation limitée à la page des téléchargements, images servies par lien | Rien | acquis |
+| Brickset | 100 appels par jour sur une clé gratuite, plafond levable sur demande ; API réservée aux applications complémentaires, conditions commerciales non publiées | Accord écrit | pending |
+| Images LEGO | [Fair Play de LEGO](https://www.lego.com/fr-fr/legal/notices-and-policies/fair-play) : usage non commercial seulement, mention de marque exigée | Décision sur l'affichage des images dans une application payante | pending |
+| GameUPC | Aucune condition publiée ; le mainteneur a écrit le 18 novembre 2026 : ni coût ni attribution, y compris pour un palier payant, environ 30 requêtes par minute au plus | Rien | acquis |
+| BoardGameGeek | [Conditions de l'API XML](https://boardgamegeek.com/xmlapi/termsofuse) : licence par application, jeton jamais demandé à l'utilisateur, logo « Powered by BGG » | Licence commerciale, en général gratuite jusqu'à 100 utilisateurs payants | pending |
 
 ## Le proxy de recherche unifié
 
-Le backend ne sert jamais une source externe directement à l'app : il expose un **proxy unifié**
+Le serveur ne laisse jamais l'application parler à une source : il expose un **proxy unifié**
 `GET /v1/search?type=<type>&q=<texte>` **ou** `?type=<type>&barcode=<code>` (les deux paramètres sont
 mutuellement exclusifs) et renvoie un `UnifiedItem` indépendant de la source.
 
-Chaque type média est servi par un **adapter** (`SourceAdapter`) :
+Chaque type est servi par un **adapter** (`SourceAdapter`) :
 
 | `type` | Source | `search` (texte) | `searchByBarcode` | `fetchDetails` |
 |---|---|---|---|---|
@@ -37,19 +78,91 @@ Chaque type média est servi par un **adapter** (`SourceAdapter`) :
 > son `searchByBarcode` orchestre le pivot **BnF → MangaDex → MAL repli**. MangaDex n'a **pas
 > d'adapter** ni de jeton (API publique, comme la BnF), il est injecté via `MangaDexCoverService`.
 
-Code : `src/common/sources/` et `src/oauth/providers/` (dépôt `acervatim-backend`).
+Deux types passent par des routes à part, présentes **dans la constellation seulement** :
+
+- **Jeux de société** : `GET /v1/search/boardgame/barcode/:code` (`?q=` pour affiner, `?format=` pour
+  le format du code scanné) et `POST /v1/search/boardgame/barcode/:code/choice`. Réservées aux
+  utilisateurs connectés, premium ou non ; le choix est plafonné à 30 par minute. Voir
+  [Jeux de société](#jeux-de-societe).
+- **LEGO** : aucune route `/v1` pour l'instant. Le catalogue vit dans `rebrickable-data`, qui ne
+  répond qu'aux autres services. Voir [LEGO](#lego).
+
+## Vinyle : Discogs {#vinyle}
+
+- **Scan** : `barcode=` part vers `database/search?barcode=` ; la recherche texte vers
+  `database/search?q=`. Un résultat texte porte le numéro de catalogue, les codes-barres et le
+  `master_id`, commun à tous les pressages d'un album : l'application regroupe ainsi les 20 à 30
+  pressages d'un même album.
+- **Accès** : le compte Discogs de l'utilisateur (OAuth 1.0a, signé côté serveur) ; à défaut, en
+  premium, le jeton personnel Acervatim, qui donne aussi accès aux images. Sans l'un ni l'autre :
+  `403 source-token-required`.
+- **Cache** : en texte, une requête vaut environ un appel Discogs (taux de succès du cache relevé
+  à 0,25 en développement, contre 0,67 par code-barres).
+
+## Film : TMDB {#film}
+
+- `GET /v1/search?type=movie&q=` puis le détail du film ; pas de recherche par code-barres.
+- **Accès** : TMDB n'a pas d'OAuth. La clé personnelle se saisit par `PUT /v1/sources/tmdb/token`
+  (chiffrée, provider `tmdb`), `DELETE` pour la retirer ; en premium, la clé serveur `TMDB_API_KEY`.
+- **État** : le serveur stocke déjà des collections `movie`. L'application n'a encore ni type film
+  ni écran ; c'est le prochain type de collection prévu dans l'application, avec le LEGO.
+
+## LEGO : Rebrickable et Brickset {#lego}
+
+Le catalogue LEGO de référence est le service `rebrickable-data` de la constellation, sans route
+`/v1` : il ne répond qu'aux services voisins (`/internal/sets`, `/internal/sets/by-barcode/:code`,
+`/internal/sets/:setNum`, `/internal/themes`).
+
+- **Rebrickable** : import quotidien, à 03:00 UTC, des CSV publics (`sets`, `themes`,
+  `inventories`, `inventory_minifigs`) depuis `cdn.rebrickable.com/media/downloads/`. Pas d'API, pas
+  de clé : les conditions de Rebrickable n'autorisent l'automatisation que sur la page des
+  téléchargements. Les images restent servies depuis Rebrickable, jamais recopiées.
+- **Brickset** : seule source connue des codes-barres de boîtes. Il n'est appelé qu'au scan d'un code
+  absent du cache (décision du 16 novembre 2026, codée le 17) : un appel `getSets` au
+  plus par code, dans un budget de 90 appels par jour UTC sur les 100 que Brickset autorise. Seuls
+  `ean`, `upc` et `brickset_id` sont gardés, 90 jours, puis effacés ; un code que Brickset ne connaît
+  pas est redemandé après 7 jours (choix validé le 17 novembre 2026 : un set neuf obtient vite son
+  code chez Brickset, et un délai plus court userait le budget en scans répétés d'un code inconnu).
+  Sans `BRICKSET_API_KEY`, le catalogue est complet mais le scan ne
+  trouve rien. La documentation de l'API ne dit pas que la recherche porte sur les codes-barres ;
+  le premier appel réel, le 20 novembre 2026, l'a vérifié sur un EAN (`5702015869935` → `75192-1`),
+  pas encore sur un UPC seul.
+- **État** : `rebrickable-data` a tourné contre une vraie base en développement, il n'est pas en
+  production. Le type de collection `lego` existe côté serveur depuis le 17 novembre 2026 :
+  `catalog-lego` refait sur `catalog-core`, recherche par `GET /v1/search?type=lego` (texte ou
+  code-barres), lue par `search` dans `rebrickable-data`, sans appel externe. L'ancien
+  `catalog-lego`, qui interrogeait l'API Rebrickable page par page, est supprimé. L'application n'a
+  pas encore d'écran LEGO.
+
+## Jeux de société : GameUPC et BoardGameGeek {#jeux-de-societe}
+
+- **Code-barres → jeu** : GameUPC, base communautaire, associe un code-barres à un identifiant
+  BoardGameGeek. Le code est normalisé avant l'appel (`400` s'il est invalide), car GameUPC ne valide
+  rien. Statuts rendus : `verified` (un seul jeu), choix parmi des candidats, `unknown`,
+  `unavailable` ; la dernière réponse connue est servie si GameUPC est injoignable.
+- **Retour des choix** : le jeu choisi par l'utilisateur est renvoyé à GameUPC (file
+  `gameupc-feedback`) sous un pseudonyme HMAC (`GAMEUPC_VOTER_PEPPER`). C'est ce vote qui fera la
+  couverture des boîtes françaises.
+- **Fiche du jeu** : BoardGameGeek (XML API2, `thing`). Tant que `BGG_API_TOKEN` est vide, aucun appel
+  ne part et la réponse vit des seules données GameUPC. Pas de jeton par utilisateur : BoardGameGeek
+  l'interdit. Logo « Powered by BGG » obligatoire dans l'application.
+- **Cible décidée le 14 novembre 2026** : un service `bgg-data` sera le seul à appeler BoardGameGeek,
+  à une requête toutes les 5 s, et `search` y lira les fiches ; il attend la licence. Le choix de
+  l'édition d'un jeu sera proposé en option, et le scan restera ouvert à tous les utilisateurs
+  connectés.
 
 ## Résolution des jetons (BYOT / repli premium / mode dégradé)
 
 Chaque source à jeton (Discogs, MAL, TMDB) résout son jeton **de la même façon**, via
-`TokenResolverService` (`src/oauth/token-resolver.service.ts`) :
+`TokenResolverService` (`src/oauth/token-resolver.service.ts` dans le monolithe ; dans la
+constellation, le service `connections` porte cette résolution et `search` la lui demande) :
 
 1. **Jeton utilisateur (BYOT)** — si l'utilisateur a connecté la source, on utilise **son** jeton
    (répartition des quotas fournisseur sur son compte, résultats liés à son compte source).
 2. **Repli premium** — sinon, si l'utilisateur est **premium**, repli sur les **jetons Acervatim** :
    `X-MAL-CLIENT-ID` (MAL), personal access token (Discogs, `DISCOGS_ACERVATIM_TOKEN`), clé serveur
-   (TMDB, `TMDB_API_KEY`). Ce repli est plafonné par un bucket de rate-limit **partagé**
-   `acervatim:<source>` (tous premiums confondus), pour ne pas faire throttler le compte Acervatim.
+   (TMDB, `TMDB_API_KEY`). Le limiteur de la file de chaque source, commun à tous les utilisateurs,
+   protège ces jetons partagés : il a remplacé les anciens buckets `acervatim:<source>`.
 3. **Mode dégradé** — sinon (non-premium sans jeton) : **aucun appel sortant** vers une source à
    jeton. On sert les sources **sans clé** (BnF, **MangaDex**) et les réponses déjà en **cache
    partagé** ; à défaut, l'erreur actionnable **`403 source-token-required`** (avec `provider`), qui
@@ -67,6 +180,14 @@ partagées.
 
 **TMDB n'a pas d'OAuth** : la clé personnelle se saisit via `PUT /v1/sources/tmdb/token` (stockée
 chiffrée dans `oauth_credentials`, provider `tmdb`) ; `DELETE` pour la révoquer.
+
+## Manga : la résolution d'un ISBN
+
+> **Ordre des sources.** Le chemin nominal du scan manga est **BnF → MangaDex → MAL en repli**.
+> MangaDex identifie l'œuvre (titre romaji/FR + auteur), fournit le **synopsis en français**, la note,
+> le nombre de tomes, les genres, les **jaquettes par tome** et le **`links.mal`** (l'id MyAnimeList,
+> porté en `metadata` pour la sync bibliothèque). MAL n'est appelé **qu'en repli** quand MangaDex
+> n'identifie pas.
 
 ## Vue d'ensemble : quatre sources pour un manga
 
@@ -631,4 +752,6 @@ serveur** (pas de trigramme SQL : la base est MariaDB).
 
 - Vue utilisateur : [D'où viennent les informations](../utilisateur/sources-de-donnees.md).
 - Flux scan macro : [architecture.md](architecture.md#3-enrichissement-au-scan).
-- Contrat API : `openapi.json` (dépôt `acervatim-backend`).
+- Contrat API : `openapi.json` (dépôts `acervatim-backend` et `acervatim-services`).
+- Code des sources : `src/common/sources/` et `src/oauth/providers/` du monolithe ; `search/src/sources/`
+  et `rebrickable-data/` dans la constellation.

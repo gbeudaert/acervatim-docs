@@ -13,6 +13,11 @@ conteneur DB en production). Un conteneur **Redis** local héberge les files **B
 appels sources + single-flight). Cette page décrit le *comment* du déploiement, indépendamment de
 l'infrastructure qui l'héberge.
 
+> **Périmètre.** Cette page décrit le déploiement du **monolithe** (`acervatim-backend`), celui qui
+> tourne en production. La production basculera sur la constellation de micro-services (décision du
+> 16 novembre 2026, bascule pas encore faite) : son déploiement, un pod Podman qui regroupe les
+> services derrière le gateway, est décrit dans `deploy/README.md` du dépôt `acervatim-services`.
+
 ## Topologie
 
 ```
@@ -25,7 +30,7 @@ l'infrastructure qui l'héberge.
 ┌────────────────────────────────────┐        ┌─────────────────────────┐
 │  Hôte applicatif (Podman rootless) │        │  Serveur de base de     │
 │  réseau podman `acervatim`         │  3306  │  données                │
-│  ├─ conteneur acervatim-api ───────┼───────▶│  MariaDB 10.5+          │
+│  ├─ conteneur acervatim-api ───────┼───────▶│  MariaDB                │
 │  │    (NestJS + Prisma)            │  mysql │  (base `acervatim`)     │
 │  │        │ 6379 (réseau interne)  │        └─────────────────────────┘
 │  └─ conteneur acervatim-redis ◀────┘
@@ -35,10 +40,10 @@ l'infrastructure qui l'héberge.
 
 | Élément | Choix |
 |---|---|
-| Runtime | Node 24 LTS |
+| Runtime | Node.js LTS, version fixée par l'image de base du `Dockerfile` |
 | Conteneurisation | **Podman rootless**, unités **Quadlet** systemd (`acervatim-api.container`, `acervatim-redis.container`) |
 | Réseau | réseau Podman partagé `acervatim` (`acervatim.network`) → l'API joint Redis par son nom |
-| Image | construite sur l'hôte de déploiement (`podman build`) |
+| Image | construite sur un poste de build pour l'architecture de l'hôte, transférée en archive OCI (voir [Mise à jour du backend](mise-a-jour.md)) ; `podman build` sur l'hôte reste possible pour une première installation |
 | Base de données | **MariaDB distante** (pas de conteneur DB en prod) ; `DATABASE_URL` pointe le serveur de base |
 | File d'attente | **Redis** local (conteneur), non exposé sur l'hôte ; `REDIS_HOST`/`REDIS_PORT` pointent le conteneur |
 | Migrations Prisma | cible de build dédiée (`--target migrate`) lancée à la main avant un déploiement schéma |
@@ -47,7 +52,8 @@ l'infrastructure qui l'héberge.
 
 ## Installation (rootless, recommandé)
 
-1. **Builder l'image** sur l'hôte :
+1. **Obtenir l'image** : la construire sur un poste de build et la charger (`podman load`), comme
+   décrit dans [Mise à jour du backend](mise-a-jour.md), ou la construire sur l'hôte :
    ```sh
    podman build -t acervatim-api:latest .
    ```

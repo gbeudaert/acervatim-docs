@@ -1,20 +1,27 @@
-# Sources de données externes (Discogs, MangaDex, MAL, TMDB, BnF, Google Books)
+# Sources de données externes (toutes collections)
 
 > Remonter : [../INDEX.md](../INDEX.md) · Doc humaine associée : [../../utilisateur/sources-de-donnees.md](../../utilisateur/sources-de-donnees.md), [../../developpeur/sources-et-pivot-isbn.md](../../developpeur/sources-et-pivot-isbn.md)
 > Toute la communication avec les providers passe par le **backend** (jamais d'appel direct depuis l'app).
+> Mis à jour le 2026-11-16. Statuts : **en service** (appelée par la production, le monolithe) · **prête**
+> (branchée dans le code, pas en production ou sans écran app) · **pending** (attend un tiers).
+> Code : monolithe `be:common/sources/` + `be:oauth/providers/` ; constellation
+> `acervatim/backend-services/search/src/sources/` (mêmes adapters, portés) et `rebrickable-data/` (LEGO).
+> Conditions d'usage et ce qui change au premium : [../../developpeur/sources-et-pivot-isbn.md](../../developpeur/sources-et-pivot-isbn.md) § Conditions d'usage.
 
 ## Vue d'ensemble
 
-| Provider | Type de collection | Auth (jeton résolu, cf. §Résolution des jetons) | Usage |
-|---|---|---|---|
-| **Discogs** | vinyl | BYOT OAuth 1.0a (compte user) → repli premium : personal token Acervatim (`DISCOGS_ACERVATIM_TOKEN`) | Recherche texte + barcode (`database/search?barcode=`), métadonnées albums |
-| **MangaDex** (**principal manga**) | manga | Aucune (API publique) | **Identité série** : synopsis **FR**, note, statut, nb tomes, genres, **jaquettes par tome**, `links.mal` / `links.al`. Source nominale du scan (nœud série `source='mangadex'`) **et de la recherche texte de séries** (`GET /v1/search?type=manga&q=`, sans jeton) |
-| **MyAnimeList (MAL)** (repli) | manga | BYOT OAuth2 PKCE (compte user) → repli premium : `X-MAL-CLIENT-ID` (`MAL_CLIENT_ID`) | **Repli d'identité** si MangaDex n'identifie pas ; joignable par id via `links.mal` (sync bibliothèque). **Repli** de la recherche texte manga : MangaDex sans résultat et jeton MAL résolu, ou MangaDex indisponible |
-| **Google Books** | manga (livre) | Clé API optionnelle (`GOOGLE_BOOKS_API_KEY`) | **Repli jaquette par ISBN/tome** (quand MangaDex n'a pas le visuel du tome) ; expose aussi `description` (résumé par édition) et le **titre par ISBN** (job `volume-info`), maillon d'entrée du repli quand la BnF ignore l'ISBN |
-| **TMDB** | movie | BYOT clé API perso (`PUT /v1/sources/tmdb/token`, pas d'OAuth) → repli premium : clé serveur (`TMDB_API_KEY`) | Recherche + détails films |
-| **GameUPC** | jeu de société | Clé serveur `x-api-key` (`GAMEUPC_API_KEY`) ; votes sous pseudonyme (`GAMEUPC_VOTER_PEPPER`) | **Code-barres → id BGG** (communautaire) ; les choix des utilisateurs lui sont renvoyés. Dépôt local `backend-services/search` : [../backend/gameupc-bgg.md](../backend/gameupc-bgg.md) |
-| **BoardGameGeek** (XML API2) | jeu de société | Jeton Bearer d'application (`BGG_API_TOKEN`), **vide tant que la licence BGG n'est pas accordée** (non commerciale d'abord, commerciale avant le premium) ; **pas de BYOT** (BGG interdit de faire obtenir un jeton à l'utilisateur final) | Fiche `thing` d'un jeu ; ≤ 1 req / 2 s, `boardgamegeek.com` sans `www`, logo « Powered by BGG » dans l'app |
-| **BnF (SRU, sans auth)** | manga | Aucune (API publique) | Pivot **ISBN → série/tome FR** (titre romaji, auteur, édition) ; énumération des tomes d'une édition (`edition-mapping`) ; **liste des éditions FR** d'une série (`search/editions`) ; **rattrapage** des tomes catalogués depuis une date (`since`) |
+| Provider | Type de collection | Auth (jeton résolu, cf. §Résolution des jetons) | Usage | Statut |
+|---|---|---|---|---|
+| **Discogs** | vinyl | BYOT OAuth 1.0a (compte user) → repli premium : personal token Acervatim (`DISCOGS_ACERVATIM_TOKEN`) | Recherche texte + barcode (`database/search?barcode=`), métadonnées albums | en service |
+| **MangaDex** (**principal manga**) | manga | Aucune (API publique) | **Identité série** : synopsis **FR**, note, statut, nb tomes, genres, **jaquettes par tome**, `links.mal` / `links.al`. Source nominale du scan (nœud série `source='mangadex'`) **et de la recherche texte de séries** (`GET /v1/search?type=manga&q=`, sans jeton) | en service |
+| **MyAnimeList (MAL)** (repli) | manga | BYOT OAuth2 PKCE (compte user) → repli premium : `X-MAL-CLIENT-ID` (`MAL_CLIENT_ID`) | **Repli d'identité** si MangaDex n'identifie pas ; joignable par id via `links.mal` (sync bibliothèque). **Repli** de la recherche texte manga : MangaDex sans résultat et jeton MAL résolu, ou MangaDex indisponible | en service |
+| **Google Books** | manga (livre) | Clé API optionnelle (`GOOGLE_BOOKS_API_KEY`) | **Repli jaquette par ISBN/tome** (quand MangaDex n'a pas le visuel du tome) ; expose aussi `description` (résumé par édition) et le **titre par ISBN** (job `volume-info`), maillon d'entrée du repli quand la BnF ignore l'ISBN | en service |
+| **TMDB** | movie | BYOT clé API perso (`PUT /v1/sources/tmdb/token`, pas d'OAuth) → repli premium : clé serveur (`TMDB_API_KEY`) | Recherche + détails films | prête (aucun type film dans l'app) |
+| **GameUPC** | jeu de société | Clé serveur `x-api-key` (`GAMEUPC_API_KEY`) ; votes sous pseudonyme (`GAMEUPC_VOTER_PEPPER`) | **Code-barres → id BGG** (communautaire) ; les choix des utilisateurs lui sont renvoyés. Constellation, service `search` : [../backend/gameupc-bgg.md](../backend/gameupc-bgg.md) | prête : clé de production accordée le 2026-11-18, ni coût ni attribution ; 20 jobs/min (serveur `/test` en dev) ; constellation seulement |
+| **BoardGameGeek** (XML API2) | jeu de société | Jeton Bearer d'application (`BGG_API_TOKEN`), **vide tant que la licence BGG n'est pas accordée** (non commerciale d'abord, commerciale avant le premium) ; **pas de BYOT** (BGG interdit de faire obtenir un jeton à l'utilisateur final) | Fiche `thing` d'un jeu ; aujourd'hui file `bgg` de `search` à ≤ 1 req / 2 s ; **cible décidée le 2026-11-14** : `bgg-data` seul appelant, 1 req / 5 s (F7, F8) ; `boardgamegeek.com` sans `www`, logo « Powered by BGG » dans l'app | pending : licence demandée le 2026-11-14 |
+| **BnF (SRU, sans auth)** | manga | Aucune (API publique) | Pivot **ISBN → série/tome FR** (titre romaji, auteur, édition) ; énumération des tomes d'une édition (`edition-mapping`) ; **liste des éditions FR** d'une série (`search/editions`) ; **rattrapage** des tomes catalogués depuis une date (`since`) | en service |
+| **Rebrickable** (CSV) | LEGO | Aucune : CSV publics `cdn.rebrickable.com/media/downloads/` (l'API n'est plus utilisée par la cible) | Catalogue de référence `rebrickable-data` : sets, thèmes, figurines, URL d'image ; import quotidien 03:00 UTC, garde `Last-Modified` | prête : `rebrickable-data` testé en dev, entré au déploiement le 2026-11-17 (C3), pas en production |
+| **Brickset** (API v3) | LEGO | Clé `BRICKSET_API_KEY` (lue par `rebrickable-data` seulement) | Codes-barres `ean`/`upc`/`brickset_id` uniquement ; appel `getSets {query: code}` **au scan d'un code absent du cache** seulement (décision du 2026-11-16, codé le 2026-11-17, action C8) : un appel au plus par code, codes gardés 90 j puis effacés, code inconnu redemandé après 7 j (validé le 2026-11-17), budget 90 appels/jour UTC (`BRICKSET_DAILY_CALL_BUDGET`, quota Brickset 100) ; plus de moissonnage | pending : clé reçue le 2026-11-20 (plafond quotidien levable sur demande), accord pour l'usage commercial à demander (courrier F2 pas encore envoyé) ; la doc de l'API ne dit pas que `query` cherche dans les codes-barres, vérifié le 2026-11-20 sur un EAN (`5702015869935` → `75192-1`), pas sur un UPC seul |
 
 ## Architecture côté backend
 
@@ -31,7 +38,7 @@
 `TokenResolverService` (`src/oauth/token-resolver.service.ts`), consommé par les adapters Discogs / MAL / TMDB, applique **une logique unique** pour tous les profils :
 
 1. **Jeton utilisateur (BYOT)** présent → on l'utilise.
-2. sinon **premium** → repli sur les **jetons Acervatim** (voir colonne *Auth* ci-dessus), plafonné par un bucket de rate-limit partagé `acervatim:<source>`.
+2. sinon **premium** → repli sur les **jetons Acervatim** (voir colonne *Auth* ci-dessus), protégés par le limiteur de la file BullMQ de la source (les anciens buckets `acervatim:<source>` sont retirés).
 3. sinon → **mode dégradé** : aucun appel sortant vers une source à jeton ; on sert les sources sans clé (BnF, **MangaDex**) et le **cache partagé** ; à défaut, `403 source-token-required` (payload `provider`) → l'app propose *connecter la source* **ou** *passer premium*. **NB** : MangaDex étant sans jeton, le scan manga s'enrichit désormais **même en mode dégradé** (identité + synopsis FR + jaquettes), MAL n'étant qu'un repli à jeton.
 
 Cache de recherche indexé sur la requête publique (`<source>:<requête>`, sans `userId`) → réponses partageables sans fuite (endpoints publics). Doc humaine : [../../developpeur/sources-et-pivot-isbn.md](../../developpeur/sources-et-pivot-isbn.md#résolution-des-jetons-byot--repli-premium--mode-dégradé).
@@ -65,7 +72,8 @@ Déclenché par le **seul** `bnf_not_found` (nouveauté non cataloguée, éditeu
 
 ## Recherche d'une série par titre (SD1 · SD3)
 
-Implémentée le 2026-11-02 sur les branches `feat/manga-recherche-serie` (non fusionnées). Mesures et
+Implémentée le 2026-11-02, fusionnée dans `main` le 2026-11-14 (monolithe, app et constellation),
+**pas encore en production** (la production tourne sur un monolithe antérieur). Mesures et
 sources : [../../etude-leviers-recherche-manga.md](../../etude-leviers-recherche-manga.md) ;
 décisions : [../../spec-macro-import-serie-manga.md](../../spec-macro-import-serie-manga.md).
 
@@ -121,3 +129,20 @@ Ni MAL (illustration **de série** `main_picture`) ni la BnF (bibliographique) n
 - Endpoints : voir [../backend/api-endpoints.md](../backend/api-endpoints.md) § OAuth et § Sources externes.
 - Stockage : `oauth_credentials` (providers `discogs` / `mal` / `tmdb`), tokens/clés chiffrés AES-256-GCM ([../backend/securite-et-privacy.md](../backend/securite-et-privacy.md)).
 - Côté app : `ui/account/AccountScreen.kt` + `AcervatimApi.startOAuth/connectedProviders/revokeOAuth`.
+
+## LEGO (Rebrickable · Brickset)
+
+- **Cible** : `rebrickable-data` (port 3190, schéma `acv_rebrickable`), **hors gateway** : `/internal/sets`,
+  `/internal/sets/by-barcode/:code`, `/internal/sets/:setNum`, `/internal/themes`, `/admin/*`. Doc :
+  `acervatim/backend-services/rebrickable-data/README.md`.
+- **Type de collection `lego`** (constellation, action C7, 2026-11-17) : type plat, servi par
+  `catalog-lego` (port 3220, clone de `catalog-vinyl` sur `catalog-core`). La recherche passe par
+  `GET /v1/search?type=lego` : l'adapter `rebrickable` de `search`
+  (`search/src/sources/rebrickable/rebrickable.adapter.ts`) lit `rebrickable-data` en `/internal/*`,
+  sans appel externe ; au scan, `meta.barcodeLookup` dit d'où vient la réponse. Le numéro canonique
+  (`42131-1`) va dans `sources[]` avec `provider: 'rebrickable'`. Conception :
+  `_bmad-output/implementation-artifacts/spec-collection-lego.md` (F10).
+- **Ancien `catalog-lego`** (stack autonome, port 3010, moissonnage de l'API Rebrickable page par page,
+  contraire aux CGU 5.3, clés personnelles) : supprimé le 2026-11-17, jamais déployé.
+- **Images** : URL Rebrickable servies telles quelles (hotlink autorisé, téléchargement automatisé
+  interdit) ; ce sont des images LEGO, Fair Play non commerciale → décision **pending** avant le premium.

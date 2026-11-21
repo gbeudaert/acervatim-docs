@@ -100,7 +100,7 @@ dominant.
 
 ### Ce qui est réellement synchronisé
 
-**Vinyle et manga**, depuis le backend 0.8.1 (2026-08-23). Le filtre `VINYL` du push et du pull est
+**Vinyle et manga**, depuis le serveur déployé le 2026-08-24 et l'app du même jour. Le filtre `VINYL` du push et du pull est
 levé, et les **nœuds (séries) transitent** : `FacadeMapper.seriesToRemote()` / `remoteToSeries()`,
 qui existaient sans appelant, sont désormais câblés.
 

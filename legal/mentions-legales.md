@@ -27,8 +27,8 @@ nav_order: 3
 ## Propriété intellectuelle
 
 - Code de l'Application sous licence **Apache 2.0**.
-- Marques et métadonnées tierces (Discogs, MyAnimeList, BnF, TMDB) restent la propriété de leurs
-  titulaires respectifs.
+- Marques et métadonnées tierces (Discogs, BnF, MangaDex, MyAnimeList, Google Books, TMDB) restent la
+  propriété de leurs titulaires respectifs.
 
 ## Données personnelles
 

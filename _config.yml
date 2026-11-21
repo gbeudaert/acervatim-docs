@@ -5,8 +5,9 @@
 title: Acervatim
 description: >-
   Documentation centrale d'Acervatim : application Android de gestion de
-  collections (vinyles, mangas...), 100 % hors-ligne par defaut, avec un mode
-  connecte optionnel d'enrichissement de metadonnees.
+  collections (vinyles et mangas, puis films, LEGO et jeux de societe), 100 %
+  hors-ligne par defaut, avec un mode connecte optionnel d'enrichissement de
+  metadonnees.
 lang: fr
 
 remote_theme: just-the-docs/just-the-docs
@@ -21,6 +22,7 @@ color_scheme: light
 aux_links:
   "Application (acervatim-app)": "https://github.com/gbeudaert/acervatim-app"
   "Backend (acervatim-backend)": "https://github.com/gbeudaert/acervatim-backend"
+  "Micro-services (acervatim-services)": "https://github.com/gbeudaert/acervatim-services"
 
 footer_content: >-
   Acervatim - documentation centrale. Application sous licence Apache 2.0.

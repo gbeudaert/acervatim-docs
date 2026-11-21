@@ -7,8 +7,9 @@ nav_order: 3
 
 # Référence API `/v1`
 
-Vue normalisée du contrat HTTP. **Source de vérité** : le code du dépôt `acervatim-backend` et son
-`openapi.json` généré au bootstrap.
+Vue normalisée du contrat HTTP, identique pour le monolithe (`acervatim-backend`, en production) et
+pour la constellation (`acervatim-services`, cible). **Source de vérité** : le code et l'`openapi.json`
+généré au démarrage ; dans la constellation, le gateway agrège celui de chaque service.
 En dev (`NODE_ENV !== 'production'`), un Swagger UI est exposé sur `GET /docs`.
 
 ## Conventions transverses
@@ -85,7 +86,7 @@ propose le bon parcours : **connecter la source** (`/v1/oauth/:provider/start`) 
 > plus de palier gratuit borné par des quotas — la notion de quota d'offre a disparu.
 >
 > En lecture, le statut vérifié est celui du **propriétaire** de la collection, pas du demandeur :
-> c'est ce qui permettra à un membre non premium de consulter une collection qu'on lui partage.
+> c'est ce qui permet à un membre non premium de consulter une collection qu'on lui partage.
 >
 > Il subsiste des plafonds purement **techniques** (anti-emballement), identiques pour tous, très
 > au-dessus de tout usage réel, que rien n'expose et qu'aucun abonnement ne lève ; les atteindre
@@ -129,6 +130,14 @@ propose le bon parcours : **connecter la source** (`/v1/oauth/:provider/start`) 
 | GET | `/v1/search/edition-mapping?title=…[&edition=…][&publisher=…][&since=AAAAMMJJ]` | Tomes d'une édition (BnF) ; `since` = notices créées depuis une date. Voir [Énumération des tomes](sources-et-pivot-isbn.md#enumeration-des-tomes). |
 | POST | `/v1/search/import-jobs` | Import asynchrone d'une édition complète (`title`, `edition`, `publisher`, `mangaId`) ; `GET /v1/search/import-jobs/:id` pour l'avancement. |
 | GET | `/v1/series-updates` | **Premium.** Nouveaux tomes des séries synchronisées détectés par la vérification hebdomadaire. Voir [Nouveaux tomes](sources-et-pivot-isbn.md#nouveaux-tomes). |
+| GET | `/v1/search/cover?isbn=…[&title=…&volume=…&edition=…]` | Jaquette d'un tome (MangaDex, puis Google Books). |
+| GET | `/v1/search?type=lego&q=…` **ou** `?type=lego&barcode=…` | **Constellation seulement.** Sets LEGO, lus dans `rebrickable-data` (aucun appel externe pour le texte). Au scan, `meta.barcodeLookup` dit d'où vient la réponse (`cache`, `brickset`, `miss`, `pending`, `disabled`, `exhausted`, `unavailable`). Voir [Sources & pivot ISBN](sources-et-pivot-isbn.md). |
+| GET | `/v1/search/boardgame/barcode/:code[?q=…][&format=…]` | **Constellation seulement.** Code-barres d'un jeu de société → candidats (GameUPC) et fiche BoardGameGeek. Voir [Jeux de société](sources-et-pivot-isbn.md#jeux-de-societe). |
+| POST | `/v1/search/boardgame/barcode/:code/choice` | **Constellation seulement.** Jeu choisi par l'utilisateur, renvoyé à GameUPC sous pseudonyme ; 30 par minute au plus. |
+
+> **Pas encore en production** : `editions`, le paramètre `publisher` et `since` d'`edition-mapping`,
+> et `series-updates` sont fusionnés dans `main` (14 novembre 2026) mais absents du serveur de
+> production, construit fin août 2026.
 
 > **Résolution des jetons** : chaque appel sortant utilise le jeton de l'utilisateur (**BYOT**) s'il a
 > connecté la source ; sinon, pour un **premium**, un repli sur les jetons Acervatim ; sinon un mode
@@ -138,7 +147,7 @@ propose le bon parcours : **connecter la source** (`/v1/oauth/:provider/start`) 
 ### Comptes externes (OAuth)
 | Méthode | Route | Rôle |
 |---|---|---|
-| GET | `/v1/oauth/:provider/start` | Démarre le flux de connexion (Discogs, MAL…). |
+| GET | `/v1/oauth/:provider/start` | Démarre le flux de connexion (Discogs, MAL). |
 | GET | `/v1/oauth/:provider/callback` | Callback OAuth. |
 | GET | `/v1/oauth` | Comptes connectés. |
 | DELETE | `/v1/oauth/:provider` | Révocation. |
@@ -150,25 +159,28 @@ propose le bon parcours : **connecter la source** (`/v1/oauth/:provider/start`) 
 | DELETE | `/v1/sources/tmdb/token` | Révoque la clé TMDB personnelle. |
 
 ### Partage de collection
+Toutes les routes sont ancrées sur `/v1/shares` : un partage porte **plusieurs collections**, chacune
+restreinte aux statuts choisis (`OWNED`, `WISHLIST`, `IGNORED`), en lecture seule pour les membres.
+
 | Méthode | Route | Rôle |
 |---|---|---|
-| POST | `/v1/collections/:id/shares` | Émettre un code de partage sur une de ses collections (**premium**). Le code en clair n'est renvoyé qu'ici : seul son empreinte est stockée. |
-| GET | `/v1/collections/:id/shares` | Partages en cours de la collection et membres qui les ont rejoints. |
+| POST | `/v1/shares` | Émettre un code de partage (**premium**) : `{ label?, collections: [{ collectionId, statuses[] }], maxUses?, expiresAt? }`. Le code en clair n'est renvoyé qu'ici : seule son empreinte est stockée. |
+| GET | `/v1/shares[?collectionId=…]` | Partages émis, avec leurs collections, statuts et membres. |
+| PATCH | `/v1/shares/:id` | Changer le libellé du partage, et rien d'autre. |
 | DELETE | `/v1/shares/:id` | Révoquer un partage : le code cesse de fonctionner et tous ses membres perdent l'accès. |
 | DELETE | `/v1/shares/:id/members/:memberUserId` | Retirer un seul membre ; le code reste valide pour les autres. |
-| POST | `/v1/shares/redeem` | Rejoindre une collection partagée avec un code. **Ne demande pas le premium** : c'est le propriétaire qui paie le stockage. |
-| GET | `/v1/shares/received` | Collections partagées avec moi. |
+| POST | `/v1/shares/redeem` | Rejoindre un partage avec un code (`{ code, label? }`). **Ne demande pas le premium** : c'est le propriétaire qui paie le stockage. |
+| GET | `/v1/shares/received` | Partages rejoints. |
+| PATCH | `/v1/shares/received/:shareId` | Changer son propre libellé du partage reçu. |
 
-> **Portée** (`scope`) choisie à l'émission : `all` (toute la collection), `owned` (seulement les
-> éléments possédés) ou `wantlist` (seulement les éléments désirés). Elle est fixée côté serveur —
-> un membre ne peut pas la réclamer plus large que ce qui a été partagé.
+> **Lecture** : un membre lit les collections partagées par les routes habituelles
+> (`/v1/collections/:id/items`…), filtrées côté serveur sur les statuts partagés ; les données
+> personnelles du propriétaire (`userData`) sont masquées hors liste blanche. Le premium compte
+> côté **propriétaire**.
 >
 > **Pourquoi un code et pas une invitation par email** : les comptes sont anonymes, il n'y a ni
-> email ni nom en base. Le code voyage donc hors-bande (message, papier, à voix haute).
->
-> **État** : le modèle et ces six routes existent ; le **filtrage de lecture** par portée est le
-> chantier suivant. Un membre qui rejoint aujourd'hui apparaît côté propriétaire mais ne voit pas
-> encore le contenu de la collection.
+> email ni nom en base. Le code voyage donc hors-bande (message, papier, à voix haute). Chaque
+> libellé reste privé de son côté.
 >
 > Un code inconnu, révoqué, expiré ou épuisé renvoie la **même** erreur `404`
 > (`/probs/share-code-invalid`) : la réponse ne dit jamais si un code existe.
@@ -183,9 +195,10 @@ propose le bon parcours : **connecter la source** (`/v1/oauth/:provider/start`) 
 ### Infra
 | Méthode | Route | Rôle |
 |---|---|---|
-| GET | `/health` | Liveness (hors `/v1`). Un `/health/ready` avec ping DB est prévu. |
+| GET | `/health` | Vivacité (hors `/v1`). |
+| GET | `/health/ready` | Disponibilité, base comprise : **constellation**, en cours de correction ; absent du monolithe. |
 
 ## Voir aussi
 
 - [Le serveur Acervatim](backend.md) · [Architecture](architecture.md).
-- Contrat brut : `openapi.json` (dépôt `acervatim-backend`).
+- Contrat brut : `openapi.json` (dépôts `acervatim-backend` et `acervatim-services`).

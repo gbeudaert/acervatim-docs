@@ -43,8 +43,9 @@ L'utilisation de l'Application vaut acceptation des présentes CGU.
 ## 6. Propriété intellectuelle
 
 - L'Application est distribuée sous licence **Apache 2.0**.
-- Les métadonnées proviennent de sources tierces (Discogs, MyAnimeList, BnF, TMDB) soumises à leurs
-  propres conditions.
+- Les métadonnées proviennent de sources tierces (Discogs, BnF, MangaDex, MyAnimeList, Google Books,
+  TMDB) soumises à leurs propres conditions. La liste à jour, type de collection par type, figure dans
+  [D'où viennent les informations](../utilisateur/sources-de-donnees.md).
 
 ## 7. Responsabilité _(à détailler)_
 

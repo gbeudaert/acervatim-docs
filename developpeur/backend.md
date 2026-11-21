@@ -10,6 +10,12 @@ nav_order: 2
 
 Le backend Acervatim est le composant serveur **optionnel** de l'écosystème. L'application Android fonctionne intégralement sans lui ; il n'entre en jeu que si vous activez le mode connecté.
 
+Il existe sous deux formes qui exposent la même API `/v1` : le **monolithe** (dépôt
+`acervatim-backend`), qui tourne en production, et la **constellation de micro-services** (dépôt
+`acervatim-services`), vers laquelle la production basculera — décision du 16 novembre 2026, date de
+bascule non fixée. Cette page décrit ce que l'API fait, quelle que soit la forme ; le découpage est
+présenté dans [Architecture](architecture.md).
+
 ## Sommaire
 {: .no_toc .text-delta }
 
@@ -22,11 +28,11 @@ Le backend Acervatim est le composant serveur **optionnel** de l'écosystème. L
 
 Le serveur remplit cinq rôles, par ordre de priorité :
 
-1. **Proxy des bases de données externes.** L'application ne parle plus directement à Discogs, MyAnimeList ou TMDB : elle interroge un unique endpoint de recherche (`/v1/search`) qui route la requête vers la bonne source selon le type de collection. Les clés et secrets d'API restent côté serveur, jamais embarqués dans l'application.
+1. **Proxy des bases de données externes.** L'application ne parle jamais directement à une source (Discogs, BnF, MangaDex, MyAnimeList, Google Books, TMDB…) : elle interroge un unique endpoint de recherche (`/v1/search`) qui route la requête vers la bonne source selon le type de collection. Les clés et secrets d'API restent côté serveur, jamais embarqués dans l'application. Liste complète : [Sources de données](sources-et-pivot-isbn.md).
 2. **Cache partagé.** Une recherche effectuée par un utilisateur bénéficie aux suivants : réponses plus rapides et charge réduite sur les API tierces.
 3. **Throttling centralisé.** Une passerelle d'appels sortants (files **BullMQ**, une par source, adossées à Redis) plafonne le débit vers les API externes et déduplique les requêtes concurrentes identiques (*single-flight*), protégeant leurs quotas (Discogs limite par exemple à 60 requêtes/minute).
 4. **OAuth complexes côté serveur.** Certains protocoles (Discogs OAuth 1.0a, avec signatures HMAC) ne peuvent pas être implémentés proprement sur un appareil sans y embarquer des secrets. Le serveur gère ces flux et stocke les jetons **chiffrés** (AES-256-GCM).
-5. **Services de compte.** Synchronisation des collections (palier premium à terme), statut premium, export et suppression des données.
+5. **Services de compte.** Synchronisation et partage des collections (premium), statut premium, export et suppression des données.
 
 ## Architecture
 
@@ -37,19 +43,21 @@ Le serveur remplit cinq rôles, par ordre de priorité :
 [Reverse proxy (TLS Let's Encrypt)]
         │
         ▼
-[API NestJS (Node.js)]
+[API NestJS (Node.js)]  — monolithe, ou gateway + services de la constellation
         ├──► MariaDB (Prisma)
-        ├──► APIs externes : Discogs · BnF · MangaDex · MyAnimeList · Google Books · TMDB
-        └──► Cache & rate-limit
+        ├──► Redis (files BullMQ, une par source)
+        └──► APIs externes : Discogs · BnF · MangaDex · MyAnimeList · Google Books · TMDB
+             (+ Rebrickable · Brickset · GameUPC · BoardGameGeek dans la constellation)
 ```
 
 | Couche | Choix |
 |---|---|
-| Framework | NestJS 10 (Node.js, TypeScript strict) |
+| Framework | NestJS (Node.js, TypeScript strict) — versions : `package.json` de chaque dépôt |
 | Base de données | MariaDB, via l'ORM Prisma |
 | Authentification | Google Sign-In côté app → JWT interne RS256 (validité 7 jours) |
 | Chiffrement | AES-256-GCM pour les jetons OAuth tiers |
-| Déploiement | Conteneur **Podman** derrière un reverse proxy TLS ; base MariaDB hébergée séparément — voir [Déploiement du backend](deploiement.md) |
+| Files d'appels sortants | **BullMQ** sur Redis : une file par source, débit borné, requêtes identiques dédoublonnées |
+| Déploiement | Conteneurs **Podman** derrière un reverse proxy TLS ; base MariaDB à part — voir [Déploiement du backend](deploiement.md) |
 
 ## Confidentialité : privacy by design
 
@@ -81,23 +89,26 @@ membre non premium puisse consulter une collection partagée avec lui.
 
 Le modèle serveur est le miroir du modèle local de l'application :
 
-- **Collections** (`/v1/collections`) — CRUD complet, typées (vinyle, manga, film…), avec recherche plein texte sur le contenu des items.
+- **Collections** (`/v1/collections`) — CRUD complet, typées (`vinyl`, `manga`, `movie`, `book`, `game`), avec recherche plein texte sur le contenu des items. L'application ne gère encore que le vinyle et le manga.
 - **Items** (`/v1/collections/:id/items`, `/v1/items/:id`) — les fiches individuelles (un disque, un tome). Chaque item porte une « vérité curée » éditable, et peut être lié à des **snapshots de sources externes** (la fiche Discogs brute, par exemple) pour ré-enrichissement ultérieur.
 - **Nœuds** (`/v1/collections/:id/nodes`, `/v1/nodes/:id`) — les regroupements hiérarchiques des types sériels : une série manga, un coffret. Les tomes s'y rattachent, ce qui permet la vue par séries multi-appareils.
 - Données typées par collection (`unifiedData`) : champs structurés propres au vinyle (label, format, pays…) ou au manga (ISBN, éditeur, numéro de tome…).
 
 ### Recherche externe unifiée
 
-- `GET /v1/search?type=...&q=...` (recherche texte) ou `GET /v1/search?type=...&barcode=...` (recherche par code EAN/UPC ou ISBN) — un seul endpoint quel que soit le type de collection. `q` et `barcode` sont **mutuellement exclusifs** (XOR : exactement l'un des deux). Le serveur choisit la ou les sources (Discogs pour le vinyle — `barcode` y route vers `database/search?barcode=…` ; MyAnimeList pour le manga, TMDB pour les films), gère le cache et les quotas, et renvoie des résultats au format unifié.
+- `GET /v1/search?type=...&q=...` (recherche texte) ou `GET /v1/search?type=...&barcode=...` (recherche par code EAN/UPC ou ISBN) — un seul endpoint quel que soit le type de collection. `q` et `barcode` sont **mutuellement exclusifs** (XOR : exactement l'un des deux). Le serveur choisit la ou les sources (Discogs pour le vinyle — `barcode` y route vers `database/search?barcode=…` ; BnF puis MangaDex pour le manga, MyAnimeList en repli ; TMDB pour les films), gère le cache et les débits, et renvoie des résultats au format unifié.
+- Manga : `GET /v1/search/edition-mapping` (tous les tomes d'une édition, avec jaquettes), `GET /v1/search/cover`, import de série asynchrone (`POST /v1/search/import-jobs`). Fusionnés dans `main`, pas encore en production : `GET /v1/search/editions` (éditions françaises d'une série) et `GET /v1/series-updates` (tomes parus).
+- Jeux de société, **constellation seulement** : `GET /v1/search/boardgame/barcode/:code` et `POST /v1/search/boardgame/barcode/:code/choice` — GameUPC puis BoardGameGeek ; la clé GameUPC est accordée, la licence BoardGameGeek reste **pending**.
 
 ### Connexion de comptes externes
 
-- `GET /v1/oauth/:provider/start` / `callback` — flux de connexion d'un compte externe (Discogs, MyAnimeList…), entièrement géré côté serveur.
+- `GET /v1/oauth/:provider/start` / `callback` — flux de connexion d'un compte externe (Discogs, MyAnimeList), entièrement géré côté serveur.
 - `GET /v1/oauth` — liste des comptes connectés ; `DELETE /v1/oauth/:provider` — révocation.
+- `PUT` / `DELETE /v1/sources/tmdb/token` — clé personnelle TMDB, qui n'a pas d'OAuth.
 
 ### Premium et invitations
 
-- `POST /v1/subscriptions/verify` et `POST /v1/invitations/redeem` — endpoints de gestion du statut premium présents dans le code ; leur périmètre fonctionnel est en cours de redéfinition (voir le plan de mise en conformité de l'offre).
+- `POST /v1/subscriptions/verify` et `POST /v1/invitations/redeem` — vérification d'un abonnement Google Play et activation par code d'invitation. Aujourd'hui, le premium s'obtient par invitation : l'achat n'est pas encore proposé dans l'application.
 - Le statut premium conditionne l'accès à la synchronisation et aux fonctionnalités qui lui sont réservées.
 
 ### Qualité de l'API
@@ -108,11 +119,11 @@ Le modèle serveur est le miroir du modèle local de l'application :
 - Validation stricte des entrées (schémas Zod) : toute donnée inattendue est rejetée.
 - Rate limiting global par IP en plus du throttling par source.
 - Documentation **OpenAPI** générée automatiquement depuis le code (interface Swagger disponible hors production).
-- `GET /health` — supervision (état du service ; un check de readiness incluant un ping de la base est prévu).
+- `GET /health` — supervision (état du service). Une sonde de disponibilité `GET /health/ready`, qui vérifie la base, est en cours d'ajout dans la constellation.
 
 ## Ce que le serveur ne fait pas
 
-- Il ne fonctionne **jamais en arrière-plan** de l'application : chaque appel correspond à une action explicite de l'utilisateur (recherche, synchronisation).
+- Il n'est **jamais sollicité en arrière-plan** par l'application : chaque appel correspond à une action de l'utilisateur (recherche, scan, synchronisation, ouverture d'une série). Côté serveur, seules des tâches internes planifiées tournent : réconciliation des abonnements, rattrapage hebdomadaire des tomes des séries suivies (premium), import quotidien du catalogue LEGO dans la constellation.
 - Il ne stocke **ni images, ni données personnelles directes**.
 - Il ne conditionne pas l'usage local : sans réseau ou sans compte, toutes les fonctionnalités locales de l'application (liste, fiches, wishlist, import/export) restent disponibles.
 

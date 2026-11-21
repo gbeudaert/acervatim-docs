@@ -2,15 +2,19 @@
 
 > Remonter : [INDEX.md](INDEX.md) · Document de **suivi de chantier** (pas une page du site public).
 > But : charger ce fichier dans une session Claude pour reprendre le travail avec tout le contexte.
-> Dernière mise à jour : 2026-07-20. Branche : `feat/mangadex-pivot-principal` (poussée ; la branche `feat/p0-bullmq-gbooks` a été **repliée dedans puis supprimée** — tout P0→P2 + P3 partiel y est). P0/P1/BnF/TMDB/MAL/**Discogs** + **MangaDex** commités et poussés. **P2 terminé**, token bucket SQL retiré. Ajout du pivot **MangaDex source principale** (`c91f4cb`) — cf. [../../developpeur/sources-et-pivot-isbn.md](../../developpeur/sources-et-pivot-isbn.md).
+> État au 2026-11-16 : P0 → P2 et P3 partiel sont dans `main` du monolithe depuis le 2026-07-20 et
+> **en production** ; le côté app de P1 est dans `main` de `acervatim-app` (commit `5e36253`). La file
+> `edition-watch` (§ 4ter) est fusionnée dans `main` le 2026-11-14, **pas encore en production**. Les
+> mêmes files ont été portées dans le service `search` de la constellation. Pivot **MangaDex source
+> principale** (`c91f4cb`) — cf. [../../developpeur/sources-et-pivot-isbn.md](../../developpeur/sources-et-pivot-isbn.md).
 
 ## TL;DR
 
 On transforme les appels aux sources externes (Google Books, BnF, MAL, Discogs, TMDB) en une
 **passerelle d'appels sortants mutualisée** adossée à **BullMQ + Redis** : throttle **global** (tous
 users confondus), **single-flight** (dédup des demandes concurrentes), **cache inter-user**. Objectif :
-supprimer les rafales de `429/503` et le timeout client qui faisaient échouer les scans (incident
-`0.5.3`). **P0 (Google Books), P1 (import série async) et P2 (BnF + TMDB + MAL + Discogs) sont
+supprimer les rafales de `429/503` et le timeout client qui faisaient échouer les scans (incident du scan
+de série complète, § 1). **P0 (Google Books), P1 (import série async) et P2 (BnF + TMDB + MAL + Discogs) sont
 implémentés, validés et poussés** (Discogs = `0508a9d`). Le **token bucket SQL** (`TokenBucketService`
 + modèle `RateLimitBucket`) a été **entièrement retiré** — toutes les sources sont derrière un limiter
 BullMQ. **P3 démarré** : le **circuit-breaker Redis** est en place (`a712cf7`) — Redis down → `503`
@@ -18,7 +22,7 @@ immédiat sur le chemin interactif au lieu d'un hang de ~15 s ; et les **métriq
 **Reste P3** : Bull Board, calibrage effectif des limiters (à partir de ces métriques), WorkManager
 app ; et la validation app bout-en-bout.
 
-## 1. Pourquoi — l'incident 0.5.3
+## 1. Pourquoi — l'incident du scan de série complète
 
 Analyse du log `acervatim-backend/logs/prod_0.5.3.log` :
 
@@ -57,7 +61,7 @@ résultat ; le **worker** résout le token du demandeur, appelle la source, met 
 - **Throttle global** : concurrence worker basse + `limiter` BullMQ par file → débit sortant plafonné
   tous users confondus (remplace le token bucket).
 - **Phase 1** reste synchrone pour l'app (enqueue-and-await) ; garde-fous : **priorité** aux jobs
-  interactifs + **max-wait** avant bascule `202`+poll (sinon on recrée le timeout 0.5.3).
+  interactifs + **max-wait** avant bascule `202`+poll (sinon on recrée le timeout du § 1).
 
 Phasage : **P0** file pilote `gbooks` → **P1** import série async (job + endpoints statut + progression)
 → **P2** généraliser MAL/BnF/Discogs/TMDB + supprimer le token bucket → **P3** durcissement (priorités,
@@ -138,8 +142,8 @@ Fire-and-poll de l'import « série complète », dans `src/search/import/` :
 
 ## 4ter. Rattrapage des éditions suivies — file `edition-watch` (SD3)
 
-Implémenté le 2026-11-02 sur la branche `feat/manga-recherche-serie` (non fusionnée), dans
-`src/search/watch/` :
+Implémenté le 2026-11-02, fusionné dans `main` le 2026-11-14 (monolithe et constellation), pas encore
+en production, dans `src/search/watch/` :
 - **Planification BullMQ, pas `@Cron`** : `upsertJobScheduler` (`edition-watch-weekly`, motif
   `0 4 * * 1` — lundi 04:00) produit **un** job par échéance, qu'un seul worker consomme ;
   `setGlobalConcurrency(1)` empêche un passage manuel de chevaucher le passage planifié. Un `@Cron`
@@ -161,7 +165,7 @@ Implémenté le 2026-11-02 sur la branche `feat/manga-recherche-serie` (non fusi
 
 ## 5. Reste à faire
 
-- **App (P1 côté client) — IMPLÉMENTÉ + validé JVM** (repo `acervatim-app`, non commité).
+- **App (P1 côté client) — IMPLÉMENTÉ + validé JVM** (repo `acervatim-app`, dans `main`, commit `5e36253`).
   `SeriesImportViewModel` pilote la machine à états `OPTIONS → LAUNCHING → POLLING → IMPORTING → DONE` :
   `POST import-jobs` → **polling adaptatif** (`import-jobs/:id`, backoff 500 ms→2 s, garde-fou 120 s)
   → au `done`, l'import local (`ImportScannedSeriesUseCase.importFromList`, **inchangé**) re-tape
@@ -223,11 +227,11 @@ Implémenté le 2026-11-02 sur la branche `feat/manga-recherche-serie` (non fusi
     échecs tracés par les workers) ; compteur d'échecs dédié = raffinement ultérieur.
   - **Reste P3** : Bull Board, **calibrage effectif des limiters** (à partir de ces métriques, sous
     charge réelle). App : WorkManager (reporté de P1).
-- **État branche** : `feat/mangadex-pivot-principal`, **poussée sur `origin`** (l'ancienne
-  `feat/p0-bullmq-gbooks` y a été repliée puis supprimée, local + distant). Commits : P0 `a4019a2`,
+- **État** : tout est dans `main` (les branches `feat/mangadex-pivot-principal` et
+  `feat/p0-bullmq-gbooks` n'existent plus). Commits : P0 `a4019a2`,
   P1 `a048d69`, P2 BnF `7fbc75a`, P2 TMDB `5f57ff6`, P2 MAL `e160cca`, P2 Discogs + drop token bucket
   `0508a9d`, P3 circuit-breaker Redis `a712cf7`, **P3 métriques files `70eacaf`**, **pivot MangaDex
-  source principale `c91f4cb`**. App-side P1 (repo `acervatim-app`) : non commité. Calibrage des
+  source principale `c91f4cb`**. App-side P1 (repo `acervatim-app`) : `5e36253`. Calibrage des
   limiters en conditions réelles : à faire (P3, désormais outillé par les métriques).
 - **Edge connu** (pré-existant, légèrement aggravé par le single-flight) : le cache jaquette est indexé
   **par ISBN seul** (ignore le `hint`). Un appel *sans hint* (ex. `mal.adapter.resolveCover(isbn)` sur

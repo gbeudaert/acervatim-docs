@@ -108,9 +108,10 @@ SD1 / AD1 présents dans les dossiers de sprints sont ceux du **vinyle / Discogs
 L'arbitrage est acté : deux éditions d'une même série **coexistent** — ce qui corrige au passage la
 divergence de modèle à l'origine du `409`.
 
-**Mise à jour du 2026-11-02** : SD1, SD2, SD3, AD1, AD2 et AD3 sont implémentés sur les branches
-`feat/manga-recherche-serie` (non commités, non fusionnés) — état, écarts et ordre de déploiement
-dans [spec-macro-import-serie-manga.md](spec-macro-import-serie-manga.md) § « Implémentation ».
+**Mise à jour du 2026-11-16** : SD1, SD2, SD3, AD1, AD2 et AD3, implémentés le 2026-11-02, sont
+fusionnés dans `main` depuis le 2026-11-14 (monolithe, app, constellation) et **pas encore en
+production** — état, écarts et ordre de déploiement dans
+[spec-macro-import-serie-manga.md](spec-macro-import-serie-manga.md) § « Implémentation ».
 
 ## Documents liés
 

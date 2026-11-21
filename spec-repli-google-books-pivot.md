@@ -259,8 +259,8 @@ docker rm -f redis-e2e
 - `googlebooks.e2e.spec.ts` a 1–2 tests instables **préexistants** (résultat variable d'un run à
   l'autre, hors de ce chantier) : ne pas les imputer à tes changements, ne pas les « corriger » au
   passage.
-- L'arbre de travail de `acervatim-backend` porte beaucoup de modifications non commitées :
-  **ne jamais `git stash`** pour isoler un test.
+- **Ne jamais `git stash`** pour isoler un test : l'arbre de travail peut porter des modifications
+  en cours qui ne sont pas les tiennes.
 - Commentaires en français, expliquant le *pourquoi* (le dépôt en est dense et cohérent) ; suivre
   l'idiome `HIT/MISS/FAIL_TTL` pour toute nouvelle constante de cache.
 

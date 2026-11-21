@@ -1,6 +1,9 @@
 # Flux métier bout-en-bout (app ↔ backend)
 
 > Remonter : [../INDEX.md](../INDEX.md) · Chemins app relatifs à `acervatim-app/app/src/main/java/app/acervatim/`, backend à `acervatim-backend/src/`.
+> **Constellation** (`acervatim/backend-services`, cible décidée le 2026-11-16) : mêmes flux vus de l'app ;
+> le `gateway` vérifie le JWT, signe un principal (`X-Acervatim-Principal`), applique premium et débits,
+> puis route vers le service qui porte la route (table : `gateway/src/routing/route-table.ts`).
 
 ## 1. Connexion Google (mode connecté)
 
@@ -18,7 +21,7 @@ Détails app : [../app/reseau-sync-compte.md](../app/reseau-sync-compte.md) · b
 BarcodeScanScreen (CameraX) → BarcodeAnalyzer (ML Kit) → BarcodeScanViewModel
   → LookupByBarcodeUseCase → ExternalSearchRepositoryImpl
   → GET /v1/search?type=<vinyl|manga>&barcode=<EAN|ISBN>
-  → backend: SearchService → SourceAdapter du type (Discogs / MAL+BnF)
+  → backend: SearchService → SourceAdapter du type (Discogs / MalAdapter : BnF → MangaDex → MAL en repli)
   → app: ExternalMatch → ScanPrefillHandoff → route record/add?barcode= ou manga/add?barcode=
   → AddRecordUseCase (Room local) [+ sync ultérieure si connecté]
 ```
@@ -35,7 +38,7 @@ Scan ISBN d'un tome → SeriesImportScreen (route series/import?barcode=)
 
 ## 3bis. Ajout d'une série manga par titre, sans tome possédé (SD1 · AD1 · AD2)
 
-Branches `feat/manga-recherche-serie` (non fusionnées). Cf.
+Fusionné dans `main` le 2026-11-14 (monolithe, app, constellation) ; pas encore en production. Cf.
 [../../spec-macro-import-serie-manga.md](../../spec-macro-import-serie-manga.md).
 
 ```
@@ -65,7 +68,8 @@ Serveur, lundi 04:00 → file edition-watch → editionMapping(since) par éditi
 ## 4. Synchronisation locale ↔ cloud
 
 ```
-SyncWorker (WorkManager) / déclenchement manuel → SyncManagerImpl (+ SyncStateStore)
+Déclenchement manuel (écran Compte) → SyncManagerImpl (+ SyncStateStore)
+  (SyncWorker.schedule existe mais n'est appelé nulle part : pas de sync périodique)
   → CRUD /v1/collections, /v1/collections/:id/nodes, /v1/collections/:id/items (AcervatimApi)
   → mapping DTO ↔ Room via RemoteDtoMapper / FacadeMapper / LocalCollectionResolver
 ```
@@ -75,6 +79,7 @@ Room reste la vérité locale ; `unifiedData` serveur = vérité curée synchron
 
 ```
 App: achat Play Billing → POST /v1/subscriptions/verify { purchaseToken }
+  (côté app : pas encore de Play Billing ; le premium s'obtient par invitation, § 6)
   → backend: google-play.service (vérif auprès de l'API Play) → upsert Subscription
 Asynchrone: Google → POST /webhooks/google-play/rtdn (Pub/Sub, signé)
   → pubsub-verifier → subscriptions.service (transition de statut, subscription-status.ts)
@@ -90,14 +95,16 @@ User: AccountScreen → POST /v1/invitations/redeem { code }
   → backend: HMAC(code) → Invitation.codeHash → InvitationRedemption + PremiumGrant éventuel
 ```
 
-## 7. Connexion d'un compte externe (Discogs / MAL / TMDB)
+## 7. Connexion d'un compte externe (Discogs / MAL) et clé TMDB
 
 ```
 App: GET /v1/oauth/{provider}/start → URL d'autorisation (navigateur)
 Provider → GET /v1/oauth/{provider}/callback
   → backend: adapter (oauth1.ts pour Discogs, pkce.ts pour MAL) → tokens chiffrés AES → oauth_credentials
 App: GET /v1/oauth (liste) · DELETE /v1/oauth/{provider} (révocation)
+TMDB (pas d'OAuth) : PUT / DELETE /v1/sources/tmdb/token → clé chiffrée, provider `tmdb`
 ```
+Constellation : service `connections` (flux, stockage, résolution du jeton demandée par `search`).
 
 ## 8. Export / import backup local (sans backend)
 
@@ -114,3 +121,18 @@ AccountScreen → DELETE /v1/me
     oauth_credentials, subscription, grants, redemptions) + AuditLog 'user.delete'
 Export préalable possible : GET /v1/me/export
 ```
+Constellation : saga orchestrée par `identity` (chaque service purge son schéma, participants
+idempotents, rejeu et alerte) — `backend-services/identity/README.md` § 2. Pas encore éprouvée en
+panne réelle.
+
+## 10. Scan d'un jeu de société (constellation seulement, pending)
+
+```
+App (à écrire, F13) → GET /v1/search/boardgame/barcode/:code[?q=&format=]  (auth user, pas premium)
+  → gateway → search: BoardGameBarcodeService → normalizeGtin (400 si invalide)
+  → GameUPC (cache → file gameupc) → verified | choix | unknown | unavailable (+ stale)
+  → fiche BGG si BGG_API_TOKEN (vide aujourd'hui : licence pending)
+Choix utilisateur → POST /v1/search/boardgame/barcode/:code/choice (30/min)
+  → file gameupc-feedback (vote sous pseudonyme HMAC)
+```
+Détail : [../backend/gameupc-bgg.md](../backend/gameupc-bgg.md). Cible : `bgg-data` seul appelant BGG (F7, F8).
