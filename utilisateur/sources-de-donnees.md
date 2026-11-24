@@ -23,7 +23,7 @@ apporte, à quel moment elle intervient, et où elle en est.
 | Statut | Signification |
 |---|---|
 | **en service** | Le serveur Acervatim l'interroge aujourd'hui. |
-| **prête** | Le serveur sait l'interroger, mais ce type de collection n'est pas encore dans l'application, ou le serveur qui la porte n'est pas encore en production. |
+| **prête** | Le serveur sait l'interroger, mais ce type de collection n'est pas encore dans l'application. |
 | **pending** | En attente d'une réponse ou d'un accord : clé d'accès, licence, autorisation d'usage. |
 
 ## Les sources par type de collection
@@ -59,7 +59,7 @@ compte relié.
 
 | Source | Ce qu'elle apporte | Quand elle intervient | Statut |
 |---|---|---|---|
-| [Rebrickable](https://rebrickable.com) | Le catalogue des sets : numéro, nom, année, thème, nombre de pièces et de figurines, image | Recherche d'un set par numéro ou par nom (le filtre par thème viendra plus tard) | prête : le catalogue est importé chaque jour par le nouveau serveur, pas encore en production |
+| [Rebrickable](https://rebrickable.com) | Le catalogue des sets : numéro, nom, année, thème, nombre de pièces et de figurines, image | Recherche d'un set par numéro ou par nom (le filtre par thème viendra plus tard) | prête : le catalogue est importé chaque jour par le serveur, mais le LEGO n'est pas encore dans l'application |
 | [Brickset](https://brickset.com) | Le code-barres imprimé sur chaque boîte | Scan d'une boîte | pending : accord de Brickset pour cet usage |
 
 Un code-barres que Brickset ne connaît pas encore, souvent celui d'un set tout juste sorti, n'est
@@ -72,7 +72,7 @@ palier payant reste à trancher : **pending**.
 
 | Source | Ce qu'elle apporte | Quand elle intervient | Statut |
 |---|---|---|---|
-| [GameUPC](https://gameupc.com) | Le jeu qui correspond à un code-barres de boîte | Scan d'une boîte | prête : clé d'accès de production obtenue, le nouveau serveur n'est pas encore en production |
+| [GameUPC](https://gameupc.com) | Le jeu qui correspond à un code-barres de boîte | Scan d'une boîte | prête : clé d'accès de production obtenue, mais les jeux de société ne sont pas encore dans l'application |
 | [BoardGameGeek](https://boardgamegeek.com) | La fiche du jeu : nom et titres français connus, année, auteurs, éditeurs, nombre de joueurs, durée, âge, description, image, note | Après le scan, une fois le jeu identifié | pending : licence demandée |
 
 Quand vous choisirez le bon jeu parmi plusieurs propositions, ce choix sera renvoyé à GameUPC, sous

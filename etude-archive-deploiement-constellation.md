@@ -4,7 +4,7 @@
 > le tout, je lance le script avec le chemin de l'archive et le script déroule par étape ».
 > Les six décisions ont été prises le 2026-11-21 ; l'archive, le script et la répétition sous WSL
 > ont été faits le même jour, et l'étiquette de la première version déplacée sur eux (sections 8
-> et 9).
+> et 9). **Déploiement de production fait le 2026-11-23**, étapes 0 à 11 (section 9).
 
 ## Suivi
 
@@ -239,5 +239,18 @@ boucle des étapes ; une entrée fermée qui faisait boucler une pause manuelle.
 5. Version : **tranché le 2026-11-21**. L'étiquette locale de la première version, jamais poussée,
    est déplacée sur l'outillage et la correction de l'image de migration : la première version
    est celle qui se déploie.
-6. Archive arm64 : **en cours** le 2026-11-21. Puis étapes 0 à 7 sur l'hôte, à l'avance.
-7. Bascule : étapes 8 à 11, le jour choisi.
+6. Archive arm64 : **faite** le 2026-11-21, en 110 minutes sous émulation : 1 375 Mio, les quatorze
+   images contrôlées en arm64 (node et moteurs Prisma), 29 empreintes vérifiées.
+7. Étapes 0 à 11 sur l'hôte : **faites** le 2026-11-23, d'un seul déroulé (l'app n'avait pas
+   encore d'utilisateurs). La production tourne sur la constellation ; le monolithe est arrêté, son
+   unité mise de côté pour un retour. Trois blocages en chemin, levés sur l'hôte :
+   - le noyau démarrait avec le contrôleur mémoire des cgroups désactivé, et `kube play` échouait
+     sur `memory.max` : `cgroup_enable=memory` à la ligne de commande du noyau, puis redémarrage ;
+   - la relance de l'étape 6 a coupé la première migration d'`acv_cat_lego`, que l'unité jouait
+     déjà depuis le démarrage de l'hôte : Prisma refusait ensuite le schéma (P3009). Ses tables,
+     vides, et `_prisma_migrations` ont été supprimées, puis le script relancé ;
+   - une coupure isolée entre l'hôte et l'instance MariaDB, sans redémarrage de celle-ci.
+
+   À corriger dans le script : l'étape 6 doit attendre un démarrage en cours au lieu de relancer
+   l'unité, l'étape 0 doit contrôler le contrôleur mémoire, le diagnostic doit lire le journal par
+   `CONTAINER_NAME=`, et le message de l'étape 10 doit prévoir un proxy sur une autre machine.

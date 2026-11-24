@@ -5,18 +5,17 @@ parent: Développeur
 nav_order: 5
 ---
 
-# Déploiement du backend — conteneur Podman
+# Déploiement du backend — pod Podman
 
-Le backend est déployé en **conteneur** (Podman rootless, unité **Quadlet** systemd), derrière un
-reverse proxy TLS. La base MariaDB est hébergée **séparément** du conteneur applicatif (pas de
-conteneur DB en production). Un conteneur **Redis** local héberge les files **BullMQ** (throttle des
-appels sources + single-flight). Cette page décrit le *comment* du déploiement, indépendamment de
+Depuis le 23 novembre 2026, la production tourne sur la **constellation de micro-services** (dépôt
+`acervatim-services`) : onze services dans un **pod Podman rootless** (unité **Quadlet** systemd),
+derrière un reverse proxy TLS qui ne vise que le gateway. La base MariaDB est hébergée
+**séparément** de l'hôte applicatif, avec un schéma par service. Un conteneur **Redis** local, hors
+du pod, héberge les files **BullMQ**. Cette page décrit le *comment* du déploiement, indépendamment de
 l'infrastructure qui l'héberge.
 
-> **Périmètre.** Cette page décrit le déploiement du **monolithe** (`acervatim-backend`), celui qui
-> tourne en production. La production basculera sur la constellation de micro-services (décision du
-> 16 novembre 2026, bascule pas encore faite) : son déploiement, un pod Podman qui regroupe les
-> services derrière le gateway, est décrit dans `deploy/README.md` du dépôt `acervatim-services`.
+> Le **monolithe** (`acervatim-backend`), qui servait la production jusque-là, est arrêté et gardé
+> pour un retour : voir [Retour au monolithe](#retour-au-monolithe).
 
 ## Topologie
 
@@ -25,128 +24,111 @@ l'infrastructure qui l'héberge.
            │  HTTPS (TLS)
            ▼
    [ Reverse proxy ]
-           │  http://localhost:3000
+           │  http://<hôte applicatif>:3100   (seul port publié)
            ▼
-┌────────────────────────────────────┐        ┌─────────────────────────┐
-│  Hôte applicatif (Podman rootless) │        │  Serveur de base de     │
-│  réseau podman `acervatim`         │  3306  │  données                │
-│  ├─ conteneur acervatim-api ───────┼───────▶│  MariaDB                │
-│  │    (NestJS + Prisma)            │  mysql │  (base `acervatim`)     │
-│  │        │ 6379 (réseau interne)  │        └─────────────────────────┘
-│  └─ conteneur acervatim-redis ◀────┘
-│       (BullMQ backing store)       │
-└────────────────────────────────────┘
+┌───────────────────────────────────────────────┐        ┌─────────────────────────┐
+│  Hôte applicatif (Podman rootless)            │        │  Serveur de base de     │
+│  ┌─ pod acervatim ──────────────────────────┐ │  3306  │  données                │
+│  │  migrate (initContainer, avant tout)     ├─┼───────▶│  MariaDB                │
+│  │  gateway :3100 ─▶ dix autres services    │ │  mysql │  onze schémas `acv_*`   │
+│  │  (joints en localhost, ports non publiés)│ │        └─────────────────────────┘
+│  └──────────────────┬───────────────────────┘ │
+│                     │ 6379, réseau `acervatim-services`
+│  conteneur acervatim-services-redis (BullMQ)  │
+└───────────────────────────────────────────────┘
 ```
 
 | Élément | Choix |
 |---|---|
-| Runtime | Node.js LTS, version fixée par l'image de base du `Dockerfile` |
-| Conteneurisation | **Podman rootless**, unités **Quadlet** systemd (`acervatim-api.container`, `acervatim-redis.container`) |
-| Réseau | réseau Podman partagé `acervatim` (`acervatim.network`) → l'API joint Redis par son nom |
-| Image | construite sur un poste de build pour l'architecture de l'hôte, transférée en archive OCI (voir [Mise à jour du backend](mise-a-jour.md)) ; `podman build` sur l'hôte reste possible pour une première installation |
-| Base de données | **MariaDB distante** (pas de conteneur DB en prod) ; `DATABASE_URL` pointe le serveur de base |
-| File d'attente | **Redis** local (conteneur), non exposé sur l'hôte ; `REDIS_HOST`/`REDIS_PORT` pointent le conteneur |
-| Migrations Prisma | cible de build dédiée (`--target migrate`) lancée à la main avant un déploiement schéma |
-| Healthcheck | `/health` défini dans l'image, planifié par un timer systemd transient |
-| Persistance du service | `loginctl enable-linger` pour survivre à la fermeture de session SSH |
+| Services | onze conteneurs dans **un seul pod** : `gateway`, `identity`, `billing`, `connections`, `sharing`, `search`, `catalog-generic`, `catalog-manga`, `catalog-vinyl`, `catalog-lego`, `rebrickable-data`. Ils partagent la pile réseau du pod et se joignent en `localhost` |
+| Port publié | **3100**, le gateway seul. Les routes `/internal/*` servent entre services et à l'exploitation : le reverse proxy ne doit pas les relayer |
+| Conteneurisation | **Podman rootless**, Quadlet : `acervatim.kube` joue le manifeste du pod ; Redis a son unité `.container` à part ; réseau `acervatim-services` |
+| Images | construites sur un poste de build pour l'architecture de l'hôte (sous émulation), livrées dans **une archive** avec le script de déploiement. L'hôte n'a ni sources ni outils de build |
+| Base de données | **MariaDB distante**, un schéma `acv_*` par service sur la même instance, un seul compte SQL |
+| Migrations Prisma | **initContainer** `migrate`, joué avant les services à chaque démarrage du pod. Un échec empêche le pod de démarrer : aucun service ne tourne sur un schéma à moitié migré |
+| File d'attente | **Redis** local (conteneur `acervatim-services-redis`), aucun port publié sur l'hôte |
+| Secrets | dans le manifeste joué `~/acervatim-services/config/acervatim.yaml` (droits 600), recomposé par le script, jamais dans un dépôt |
+| Persistance du service | `loginctl enable-linger` : le pod survit à la fermeture de session et démarre avec l'hôte |
 
-## Installation (rootless, recommandé)
+## Installation : une archive, un script
 
-1. **Obtenir l'image** : la construire sur un poste de build et la charger (`podman load`), comme
-   décrit dans [Mise à jour du backend](mise-a-jour.md), ou la construire sur l'hôte :
-   ```sh
-   podman build -t acervatim-api:latest .
-   ```
-2. **Déposer l'unité Quadlet** dans `~/.config/containers/systemd/acervatim-api.container`.
-3. **Déposer le `.env`** (chmod 600) dans `~/acervatim/.env`, avec au minimum :
-   ```
-   DATABASE_URL=mysql://user:pass@<hôte-db>:3306/acervatim
-   REDIS_HOST=acervatim-redis
-   REDIS_PORT=6379
-   SUB_HASH_PEPPER=…
-   ENCRYPTION_KEY=…
-   JWT_PRIVATE_KEY=…
-   INVITE_CODE_PEPPER=…
-   SHARE_CODE_PEPPER=…
-   ```
-   Ces secrets sont **non rotables sans coût** (perdre le pepper = perdre la corrélation `sub` Google
-   → `userId` ; perdre `SHARE_CODE_PEPPER` = invalider tous les codes de partage en circulation). Ils
-   ne sont jamais commités. La liste **exhaustive et faisant foi** des variables exigées au démarrage
-   est le schéma de validation d'env du backend (`src/config/env.validation.ts`) : le service refuse
-   de démarrer s'il en manque une.
-4. **Déposer les unités Redis + réseau** dans `~/.config/containers/systemd/` :
-   `acervatim.network` (réseau partagé) et `acervatim-redis.container`.
-5. **Recharger et démarrer** (Redis d'abord — l'API se reconnecte seule mais autant l'avoir prêt) :
-   ```sh
-   systemctl --user daemon-reload
-   systemctl --user start acervatim-redis
-   systemctl --user start acervatim-api
-   ```
-6. **Survie hors session SSH** (sinon les services et le timer de healthcheck s'arrêtent à la
-   déconnexion) :
-   ```sh
-   loginctl enable-linger $USER
-   ```
+**Sur le poste de build**, depuis un commit étiqueté :
 
-> Variante root : déposer l'unité dans `/etc/containers/systemd/`, remplacer `%h` par un chemin
-> absolu (ex. `/opt/acervatim/.env`) et `WantedBy=multi-user.target`.
-
-## Migrations Prisma
-
-Le conteneur runtime **n'exécute pas** les migrations (le CLI `prisma` est une devDep, absente de
-l'image runtime). Avant un déploiement qui change le schéma, lancer une fois la cible dédiée contre la
-base distante :
-
-```sh
-podman build --target migrate -t acervatim-migrate .
-podman run --rm --env-file ~/acervatim/.env acervatim-migrate
+```powershell
+./deploy/build-archive.ps1 -Version <version>
 ```
 
-> La procédure complète de montée de version d'un service **déjà en place** (ordre des opérations,
-> sauvegarde, bascule de tag, retour arrière) est décrite dans
-> [Mise à jour du backend](mise-a-jour.md).
+Le script construit les douze images (onze services et l'image de migration), prend Redis et un
+client MariaDB dans la même architecture, contrôle l'architecture de chaque image, puis écrit l'archive
+et `deploiement.sh` à côté.
 
-## Redis (files BullMQ)
-
-Redis héberge les files **BullMQ** qui régulent les appels aux sources externes (throttle global +
-single-flight + cache mutualisé). Il tourne en **conteneur local** sur l'hôte applicatif, sur le même
-réseau Podman que l'API.
-
-| Aspect | Choix | Pourquoi |
-|---|---|---|
-| Exposition | **aucun port publié** sur l'hôte | seul l'API, sur le réseau `acervatim`, y accède |
-| Résolution | par nom de conteneur (`acervatim-redis`) via le DNS Podman | d'où `REDIS_HOST=acervatim-redis` |
-| Éviction | `--maxmemory-policy noeviction` | ne jamais évincer un job en attente sous pression mémoire |
-| Persistance | `--appendonly yes` (volume `acervatim-redis-data`) | confort : les jobs sont **idempotents/rejouables** (réchauffeurs de cache), une perte ne fait que re-déclencher une résolution au prochain scan |
-
-Vérifier après démarrage :
+**Sur l'hôte**, avec le compte qui fait tourner les services :
 
 ```sh
-systemctl --user status acervatim-redis
-podman exec acervatim-redis redis-cli ping           # → PONG
-podman exec acervatim-api sh -c 'nc -z acervatim-redis 6379 && echo reachable'
+sh deploiement.sh acervatim-services-<version>-arm64.tar --jusqua 7   # à l'avance, sans toucher à la production
+sh deploiement.sh acervatim-services-<version>-arm64.tar               # jusqu'au bout
+sh deploiement.sh statut                                                 # à tout moment
 ```
 
-> Panne Redis : l'API se reconnecte automatiquement. Une sonde de disponibilité dédiée court-circuite
-> le chemin interactif — Redis down → **`503` propre immédiat** (pas d'attente du timeout de file) ;
-> sur le chemin best-effort (jaquettes), l'indisponibilité dégrade en résultat vide. L'endpoint
-> `/health` expose `redis: up|down` (le `status` reste `ok` : Redis n'est pas vital au boot).
+Le script déroule douze étapes notées. Une relance reprend à la première qui n'est pas faite.
+
+| Étapes | Ce qui se passe |
+|---|---|
+| 0 à 2 | vérifications de l'hôte, extraction de l'archive, chargement des images |
+| 3 à 5 | secrets, schémas sur l'instance MariaDB, unités Quadlet et manifeste joué |
+| 6 et 7 | démarrage de Redis puis du pod (migrations en initContainer), tests de fumée |
+| 8 et 9 | reprise des données, écritures gelées, puis relecture au nom de chaque utilisateur |
+| 10 | bascule du reverse proxy, à la main : le script dit quoi changer et attend `FAIT` |
+| 11 | nettoyage, et mise de côté de l'ancienne unité |
+
+Le détail de chaque étape est dans `deploy/README.md`, section 3, du dépôt
+[`acervatim-services`](https://github.com/gbeudaert/acervatim-services/blob/main/deploy/README.md).
+La reprise des données est décrite dans `db/reprise/README.md` du même dépôt.
+
+## Vérification
+
+```sh
+systemctl --user status acervatim
+podman pod ps
+curl -s -o ready.json -w '%{http_code}\n' localhost:3100/health/ready   # attendu : 200
+jq -e '.status == "ok"' ready.json                                     # attendu : true
+```
+
+`/health/ready` du gateway interroge la sonde de disponibilité des services qu'il route : la
+constellation que l'app atteint est complète quand il répond `200` et `"status": "ok"`.
 
 ## Points d'attention
 
-- `RunInit=true` (Podman `--init`) : `main.ts` n'a pas de handler `SIGTERM` ; sans init, Node en PID 1
-  ignore le signal et l'arrêt attend le `SIGKILL`.
-- `After=network-online.target` + `Restart=always` : la base est **distante**, le réseau doit être
-  prêt ; `Restart=always` couvre le cas où la base n'est pas encore joignable au démarrage de l'hôte.
-- `TimeoutStartSec=90` : laisse le temps au premier `prisma connect` (base distante) + au bootstrap Nest.
+Vus au déploiement de production du 23 novembre 2026 :
+
+- **Contrôleur mémoire des cgroups.** Le manifeste fixe des limites mémoire : un noyau démarré avec
+  `cgroup_disable=memory` fait échouer le démarrage du pod. Il faut `cgroup_enable=memory` sur la
+  ligne de commande du noyau.
+- **Reverse proxy sur une autre machine.** Il vise l'adresse de l'hôte applicatif et le port 3100,
+  pas `localhost`, et le pare-feu de l'hôte doit laisser passer ce port.
+- **Journaux.** Les sorties des conteneurs vont au journal systemd :
+  `journalctl CONTAINER_NAME=acervatim-<service>`, avec `sudo` si le compte n'a pas accès au journal
+  système.
+- **Ne pas couper un premier démarrage.** Après un redémarrage de l'hôte, le pod démarre seul et joue
+  les migrations. Le relancer ou l'arrêter pendant une première migration la laisse « commencée sans
+  fin », et Prisma refuse ensuite toute migration de ce schéma.
+- **Mise à jour.** Le passage d'une version de la constellation à la suivante n'est pas encore
+  outillé : le script refuse une archive quand une version est déjà installée.
+
+## Retour au monolithe
+
+Tant qu'aucun utilisateur n'a écrit depuis la bascule, `sh deploiement.sh retour` relance le
+monolithe sur sa base, restée intacte, et rappelle de repointer le reverse proxy sur son port. Après
+des écritures, un retour les perdrait. Le déploiement du monolithe lui-même (unité Quadlet, `.env`,
+Redis) est décrit dans le dossier `deploy/` du dépôt `acervatim-backend`, et sa montée de version dans
+[Mise à jour du backend](mise-a-jour.md).
 
 ## Source de vérité
 
-Dépôt `acervatim-backend`, dossier `deploy/` (unités Quadlet commentées pas à pas) :
-`acervatim-api.container`, `acervatim-redis.container`, `acervatim.network`.
+Dépôt `acervatim-services`, dossier `deploy/` : `README.md` (procédure), `acervatim.kube` et
+`acervatim.yaml` (unité et manifeste commentés), `deploiement.sh` et `build-archive.ps1`.
 
 ## Voir aussi
 
-- [Mise à jour du backend](mise-a-jour.md) — montée de version d'un service déjà installé : images,
-  migrations Prisma, bascule et retour arrière.
 - [Architecture § Déploiement](architecture.md#déploiement).
+- [Mise à jour du backend](mise-a-jour.md) — montée de version du monolithe.

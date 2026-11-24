@@ -1,7 +1,7 @@
 # « Où trouver X ? » — table de lookup rapide
 
 > Remonter : [../INDEX.md](../INDEX.md) · Point d'entrée le plus rapide pour un agent : chercher son intention ici, ouvrir directement le fichier cible.
-> Préfixes : `app:` = `acervatim-app/app/src/main/java/app/acervatim/` · `be:` = `acervatim-backend/src/` (monolithe, en production) · `svc:` = `acervatim/backend-services/` (constellation, cible)
+> Préfixes : `app:` = `acervatim-app/app/src/main/java/app/acervatim/` · `be:` = `acervatim-backend/src/` (monolithe, arrêté depuis la bascule du 2026-11-23) · `svc:` = `acervatim/backend-services/` (constellation, en production)
 
 ## Par intention
 
@@ -17,7 +17,7 @@
 | Ajouter une source externe / un adapter | `be:oauth/providers/*.adapter.ts` + `be:common/sources/` | [transverse/sources-externes.md](sources-externes.md) |
 | Toucher au repli quand la BnF ignore l'ISBN | `be:oauth/providers/mal.adapter.ts` (`googleBooksPivot`) + `be:common/sources/title-ladder.ts` | [transverse/sources-externes.md](sources-externes.md) § repli Google Books |
 | Comprendre un flux complet (scan, sync, premium…) | — | [transverse/flux-metier.md](flux-metier.md) |
-| Comprendre le découpage en services / la cible micro-services | — | [backend/architecture-microservices.md](../backend/architecture-microservices.md) (**cible engagée le 2026-11-16**, bascule complète décidée ; implémentation non déployée dans `acervatim/backend-services`, GitHub `acervatim-services`) · carte des services : [../INDEX.md](../INDEX.md) § Carte de la constellation |
+| Comprendre le découpage en services / la cible micro-services | — | [backend/architecture-microservices.md](../backend/architecture-microservices.md) (bascule complète décidée le 2026-11-16, **faite le 2026-11-23** ; implémentation en production dans `acervatim/backend-services`, GitHub `acervatim-services`) · carte des services : [../INDEX.md](../INDEX.md) § Carte de la constellation |
 | Toucher auth / JWT / identité | `be:auth/`, `be:common/guards/jwt-auth.guard.ts` ; `app:data/remote/auth/` | [backend/securite-et-privacy.md](../backend/securite-et-privacy.md) |
 | Lancer le backend / une migration / les tests | `acervatim-backend/scripts/dev.ps1` | [backend/operations-dev.md](../backend/operations-dev.md) |
 | Builder/tester l'app | `.\gradlew.bat assembleDebug / test / lint` | [conventions.md](../conventions.md) |

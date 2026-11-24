@@ -1,15 +1,16 @@
 # Cible — Découpage micro-services (un service par type de collection + partages)
 
-> Remonter : [INDEX.md](INDEX.md) · **Cible d'architecture engagée le 2026-11-16** — document de
-> travail, pas une page du site public.
-> Dernière mise à jour : 2026-11-16.
+> Remonter : [INDEX.md](INDEX.md) · **Architecture en production depuis le 2026-11-23** — document
+> de travail, pas une page du site public.
+> Dernière mise à jour : 2026-11-24.
 >
 > **Décision du 2026-11-16 : bascule complète de la production vers la constellation**, sans arrêt
-> à un palier intermédiaire. Le monolithe `acervatim-backend` (déployé le 2026-08-24) reste
-> ce qui tourne jusqu'à la bascule ; l'implémentation de cette cible est dans le dépôt
-> `acervatim/backend-services`, pas encore déployée. La séparation des comptes SQL par service est
-> reportée : un seul compte, une seule instance MariaDB, un schéma par service, à revoir selon
-> l'évolution de la charge. Ce document décrit la cible, pas l'état de ce dépôt.
+> à un palier intermédiaire. **Bascule faite le 2026-11-23** : l'implémentation, dans le dépôt
+> `acervatim/backend-services`, sert la production à la place du monolithe `acervatim-backend`
+> (déployé le 2026-08-24), arrêté et gardé pour un retour pendant la fenêtre de retour. La
+> séparation des comptes SQL par service est reportée : un seul compte, une seule instance
+> MariaDB, un schéma par service, à revoir selon l'évolution de la charge. Ce document décrit la
+> cible ; les mesures du § 4 restent à produire sur la production.
 
 ## TL;DR
 

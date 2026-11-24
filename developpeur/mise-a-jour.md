@@ -7,13 +7,14 @@ nav_order: 6
 
 # Mise à jour du backend — montée de version
 
-Cette page décrit la **procédure de montée de version** du monolithe déjà en service : ce qu'on
-construit, dans quel ordre on l'applique, et comment on revient en arrière. L'installation initiale
-et la topologie sont décrites dans [Déploiement du backend](deploiement.md) ; on ne les répète pas.
+Cette page décrit la **procédure de montée de version** du monolithe : ce qu'on construit, dans
+quel ordre on l'applique, et comment on revient en arrière.
 
-> La production basculera sur la constellation de micro-services (décision du 16 novembre 2026).
-> Cette procédure vaut jusqu'à la bascule ; celle de la constellation, où les migrations des schémas
-> tournent dans un initContainer, est décrite dans `deploy/README.md` du dépôt `acervatim-services`.
+> Depuis le 23 novembre 2026, la production tourne sur la constellation de micro-services, décrite
+> dans [Déploiement du backend](deploiement.md). Le monolithe est arrêté et gardé pour un retour :
+> cette procédure ne vaut plus que pour lui. Pour la constellation, le passage d'une version à la
+> suivante n'est pas encore outillé ; ses migrations tournent dans un initContainer à chaque
+> démarrage du pod.
 
 Le principe tient en trois points :
 

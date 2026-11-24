@@ -21,7 +21,8 @@
 
 Au 2026-11-04, le chantier de la constellation était le découpage (README de `backend-services`,
 § 6) et la recherche manga. Les jeux de société n'y figuraient pas. Le code décrit ici est dans
-`main` depuis le 2026-11-14 (commits `8876527`, `a55821d`), non déployé. La spec en
+`main` depuis le 2026-11-14 (commits `8876527`, `a55821d`), en production par la constellation
+depuis le 2026-11-23 (aucun appel à BGG tant que la licence est pending). La spec en
 brouillon du 2026-11-03,
 [spec-catalog-boardgame-bgg-data.md](../../_bmad-output/implementation-artifacts/spec-catalog-boardgame-bgg-data.md),
 prévoit `catalog-boardgame` et un service de référence local `bgg-data` à la manière de

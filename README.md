@@ -26,8 +26,8 @@ Cette doc est **normalisée, curée et auto-portante** : elle ne contient pas d'
 des dépôts applicatifs.
 
 Le **code reste la source de vérité** : en cas de doute, les dépôts `acervatim-app` (application),
-`acervatim-backend` (serveur en production) et `acervatim-services` (serveur cible, en micro-services)
-font foi.
+`acervatim-services` (serveur en production, en micro-services) et `acervatim-backend` (ancien
+serveur, gardé pour un retour) font foi.
 
 ## Développement local
 

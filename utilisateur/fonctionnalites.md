@@ -35,10 +35,10 @@ Avec le **mode connecté** (connexion Google, voir [Le mode connecté](mode-conn
   d'autres membres, en lecture seule. Le premium s'obtient aujourd'hui par un code d'invitation ;
   l'achat dans l'application n'est pas encore ouvert.
 
-## Prêt, en attente de la mise à jour du serveur
+## Arrivé avec le nouveau serveur
 
-Ces fonctionnalités sont développées dans l'application et dans le serveur cible ; elles seront
-disponibles quand le serveur de production aura été mis à jour.
+Ces fonctionnalités sont dans l'application et, depuis le 23 novembre 2026, dans le serveur de
+production.
 
 - **Ajouter une série manga par son titre**, sans en posséder un tome : vous tapez le titre (français
   ou original), choisissez la série puis son **édition française** (éditeur, édition standard,

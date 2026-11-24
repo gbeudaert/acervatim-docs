@@ -48,8 +48,8 @@ Cette documentation est organisée par **public** :
 | Dépôt | Rôle | Stack |
 |-------|------|-------|
 | [`acervatim-app`](https://github.com/gbeudaert/acervatim-app) | Application Android | Kotlin · Jetpack Compose · Room · Hilt · Retrofit |
-| [`acervatim-backend`](https://github.com/gbeudaert/acervatim-backend) | Serveur actuel, en production : un seul programme (le « monolithe ») | Node.js · NestJS · Prisma · MariaDB · Redis |
-| [`acervatim-services`](https://github.com/gbeudaert/acervatim-services) | Serveur cible, découpé en micro-services ; la production y basculera, la date n'est pas fixée | Node.js · NestJS · Prisma · MariaDB · Redis |
+| [`acervatim-services`](https://github.com/gbeudaert/acervatim-services) | Serveur en production depuis le 23 novembre 2026, découpé en micro-services | Node.js · NestJS · Prisma · MariaDB · Redis |
+| [`acervatim-backend`](https://github.com/gbeudaert/acervatim-backend) | Ancien serveur, en un seul programme (le « monolithe ») : arrêté, gardé pour un retour | Node.js · NestJS · Prisma · MariaDB · Redis |
 | [`acervatim-docs`](https://github.com/gbeudaert/acervatim-docs) | **Cette documentation** | Markdown · Jekyll (just-the-docs) |
 
 Les versions des outils et des dépendances ne sont pas reprises ici : les fichiers de build de chaque

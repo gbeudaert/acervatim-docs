@@ -7,10 +7,10 @@ nav_order: 1
 
 # Acervatim — Architecture macro
 
-Vue d'ensemble **système** des composants Acervatim et de leurs interactions. Deux serveurs
-coexistent : le **monolithe**, qui tourne en production, et la **constellation de micro-services**,
-vers laquelle la production basculera (décision du 16 novembre 2026, bascule pas encore faite).
-L'application ne voit aucune différence : les deux exposent le même contrat `/v1/*`.
+Vue d'ensemble **système** des composants Acervatim et de leurs interactions. Depuis le 23 novembre
+2026, la production tourne sur la **constellation de micro-services** ; le **monolithe**, qui la
+servait jusque-là, est arrêté et gardé pour un retour. L'application ne voit aucune différence : les
+deux exposent le même contrat `/v1/*`.
 
 ## Vue système
 
@@ -22,9 +22,9 @@ L'application ne voit aucune différence : les deux exposent le même contrat `/
                            │  HTTPS REST /v1/*  ·  Bearer JWT interne
                            ▼
    ┌───────────────────────────────────────────────────────────┐
-   │ Serveur Acervatim : aujourd'hui le monolithe               │
-   │ (acervatim-backend), demain la constellation               │
-   │ (acervatim-services). NestJS · Prisma · MariaDB · Redis    │
+   │ Serveur Acervatim : la constellation (acervatim-services),│
+   │ en production depuis le 23 novembre 2026, à la place du   │
+   │ monolithe (acervatim-backend). NestJS · Prisma · MariaDB  │
    └───────┬──────────────────────────────────┬────────────────┘
            │                                  │
   Google Identity                    Proxy des bases externes
@@ -45,15 +45,16 @@ synchronisation et le partage ; ça ne conditionne jamais l'usage de base.
 - Couche réseau **Retrofit** (`data/remote/`) : `AuthApi`, `AcervatimApi`, intercepteurs (Bearer + `problem+json` → `ApiException`).
 - Types de collection gérés : **vinyle** et **manga**. Les films et le LEGO sont les prochains.
 
-### Serveur en production : le monolithe (`acervatim-backend`)
+### Ancien serveur : le monolithe (`acervatim-backend`)
 - Un seul processus NestJS, une base MariaDB, un Redis pour les files BullMQ.
 - Rôles : authentification (Google → JWT interne), collections / items / nœuds, **proxy de recherche
   externe** unifiée, premium, invitations, partage de collections.
 - Contrat : [Référence API](api-reference.md) · `openapi.json` (dépôt `acervatim-backend`).
-- La production fait tourner une version construite fin août 2026 : elle ne contient pas encore la
-  recherche de série manga par titre ni le rattrapage des tomes parus, fusionnés le 14 novembre.
+- Il a servi la production jusqu'au 23 novembre 2026, dans une version construite fin août 2026, sans
+  la recherche de série manga par titre ni le rattrapage des tomes parus. Il est arrêté depuis, et
+  gardé pour un retour pendant la fenêtre de retour.
 
-### Serveur cible : la constellation (`acervatim-services`)
+### Serveur en production : la constellation (`acervatim-services`)
 Le même contrat `/v1/*`, découpé en services qui ont chacun leur schéma dans une même instance
 MariaDB, derrière un **gateway** :
 
@@ -68,24 +69,25 @@ MariaDB, derrière un **gateway** :
 | `catalog-vinyl`, `catalog-manga`, `catalog-lego`, `catalog-generic` | Collections, items et nœuds, par type (`catalog-generic` porte film, livre, jeu vidéo) |
 | `rebrickable-data` | Catalogue LEGO de référence (Rebrickable, Brickset), interne, sans route `/v1` |
 
-État au 16 novembre 2026 : la constellation tourne en développement, la reprise des données du
-monolithe a été répétée en développement, rien n'a encore tourné sous Podman. Le LEGO
-(`catalog-lego`, refait le 17 novembre 2026 sur le code commun des catalogues) fait partie de la
-bascule. La mémoire a été mesurée
-sur un poste de développement : 481 à 603 Mo de mémoire réelle pour neuf services, contre 121 à
-130 Mo pour le monolithe.
+En production depuis le 23 novembre 2026 : les onze services tournent dans un pod Podman, leurs
+schémas sur l'instance MariaDB qui porte aussi la base du monolithe, et les données du monolithe ont
+été reprises à la bascule. Le LEGO (`catalog-lego`, refait le 17 novembre 2026 sur le code commun des
+catalogues) en fait partie. La mémoire a été mesurée sur un poste de développement : 481 à 603 Mo
+de mémoire réelle pour neuf services, contre 121 à 130 Mo pour le monolithe. Elle reste à mesurer en
+production.
 
 ## Déploiement
 
 Les deux serveurs se déploient en **conteneurs** (Podman rootless, unités **Quadlet** systemd),
 derrière un reverse proxy TLS.
 
-- **Monolithe** : un conteneur applicatif, un conteneur Redis, la base MariaDB hébergée à part —
-  voir [Déploiement du backend](deploiement.md) et [Mise à jour du backend](mise-a-jour.md). Source
-  de vérité : `deploy/acervatim-api.container` dans `acervatim-backend`.
-- **Constellation** : un pod qui regroupe les services, un seul port publié (celui du gateway), les
-  migrations des schémas jouées par un initContainer avant le démarrage, MariaDB et Redis hors du
-  pod. Source de vérité : `deploy/README.md` dans `acervatim-services`.
+- **Constellation**, en production : un pod qui regroupe les services, un seul port publié (celui du
+  gateway), les migrations des schémas jouées par un initContainer avant le démarrage, MariaDB et
+  Redis hors du pod — voir [Déploiement du backend](deploiement.md). Source de vérité :
+  `deploy/README.md` dans `acervatim-services`.
+- **Monolithe**, arrêté et gardé pour un retour : un conteneur applicatif, un conteneur Redis, la
+  base MariaDB hébergée à part — voir [Mise à jour du backend](mise-a-jour.md). Source de vérité :
+  `deploy/acervatim-api.container` dans `acervatim-backend`.
 
 ## Flux clés
 
@@ -128,7 +130,7 @@ Le mapping vit dans `data/remote/mapper/FacadeMapper` côté app.
 - **UnifiedItem** : résultat normalisé de `/v1/search`, indépendant de la source externe.
 - **SyncState** : `LOCAL_ONLY` · `DIRTY` · `SYNCED` — état de synchro d'une ligne locale.
 - **Mode connecté** : session active (JWT) → enrichissement avec les jetons de l'utilisateur (*bring your own token*). Le **premium** ajoute l'usage des jetons Acervatim, la synchronisation et le partage.
-- **Monolithe / constellation** : le serveur actuel, en un seul programme, et le serveur cible, découpé en micro-services.
+- **Monolithe / constellation** : le serveur d'origine, en un seul programme, arrêté depuis le 23 novembre 2026, et le serveur en production, découpé en micro-services.
 
 ## Voir aussi
 

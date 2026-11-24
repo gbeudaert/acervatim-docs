@@ -7,8 +7,8 @@ nav_order: 3
 
 # Référence API `/v1`
 
-Vue normalisée du contrat HTTP, identique pour le monolithe (`acervatim-backend`, en production) et
-pour la constellation (`acervatim-services`, cible). **Source de vérité** : le code et l'`openapi.json`
+Vue normalisée du contrat HTTP, identique pour la constellation (`acervatim-services`, en production
+depuis le 23 novembre 2026) et pour le monolithe (`acervatim-backend`, gardé pour un retour). **Source de vérité** : le code et l'`openapi.json`
 généré au démarrage ; dans la constellation, le gateway agrège celui de chaque service.
 En dev (`NODE_ENV !== 'production'`), un Swagger UI est exposé sur `GET /docs`.
 
@@ -135,9 +135,9 @@ propose le bon parcours : **connecter la source** (`/v1/oauth/:provider/start`) 
 | GET | `/v1/search/boardgame/barcode/:code[?q=…][&format=…]` | **Constellation seulement.** Code-barres d'un jeu de société → candidats (GameUPC) et fiche BoardGameGeek. Voir [Jeux de société](sources-et-pivot-isbn.md#jeux-de-societe). |
 | POST | `/v1/search/boardgame/barcode/:code/choice` | **Constellation seulement.** Jeu choisi par l'utilisateur, renvoyé à GameUPC sous pseudonyme ; 30 par minute au plus. |
 
-> **Pas encore en production** : `editions`, le paramètre `publisher` et `since` d'`edition-mapping`,
-> et `series-updates` sont fusionnés dans `main` (14 novembre 2026) mais absents du serveur de
-> production, construit fin août 2026.
+> **En production depuis la bascule du 23 novembre 2026** : `editions`, le paramètre `publisher` et
+> `since` d'`edition-mapping`, et `series-updates`, fusionnés dans `main` le 14 novembre 2026. Le
+> monolithe déployé, construit fin août 2026, ne les a pas.
 
 > **Résolution des jetons** : chaque appel sortant utilise le jeton de l'utilisateur (**BYOT**) s'il a
 > connecté la source ; sinon, pour un **premium**, un repli sur les jetons Acervatim ; sinon un mode

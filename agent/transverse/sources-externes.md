@@ -2,8 +2,9 @@
 
 > Remonter : [../INDEX.md](../INDEX.md) · Doc humaine associée : [../../utilisateur/sources-de-donnees.md](../../utilisateur/sources-de-donnees.md), [../../developpeur/sources-et-pivot-isbn.md](../../developpeur/sources-et-pivot-isbn.md)
 > Toute la communication avec les providers passe par le **backend** (jamais d'appel direct depuis l'app).
-> Mis à jour le 2026-11-16. Statuts : **en service** (appelée par la production, le monolithe) · **prête**
-> (branchée dans le code, pas en production ou sans écran app) · **pending** (attend un tiers).
+> Mis à jour le 2026-11-24. Statuts : **en service** (appelée par la production, la constellation
+> depuis la bascule du 2026-11-23) · **prête** (branchée dans le code, pas en production ou sans
+> écran app) · **pending** (attend un tiers).
 > Code : monolithe `be:common/sources/` + `be:oauth/providers/` ; constellation
 > `acervatim/backend-services/search/src/sources/` (mêmes adapters, portés) et `rebrickable-data/` (LEGO).
 > Conditions d'usage et ce qui change au premium : [../../developpeur/sources-et-pivot-isbn.md](../../developpeur/sources-et-pivot-isbn.md) § Conditions d'usage.
@@ -20,7 +21,7 @@
 | **GameUPC** | jeu de société | Clé serveur `x-api-key` (`GAMEUPC_API_KEY`) ; votes sous pseudonyme (`GAMEUPC_VOTER_PEPPER`) | **Code-barres → id BGG** (communautaire) ; les choix des utilisateurs lui sont renvoyés. Constellation, service `search` : [../backend/gameupc-bgg.md](../backend/gameupc-bgg.md) | prête : clé de production accordée le 2026-11-18, ni coût ni attribution ; 20 jobs/min (serveur `/test` en dev) ; constellation seulement |
 | **BoardGameGeek** (XML API2) | jeu de société | Jeton Bearer d'application (`BGG_API_TOKEN`), **vide tant que la licence BGG n'est pas accordée** (non commerciale d'abord, commerciale avant le premium) ; **pas de BYOT** (BGG interdit de faire obtenir un jeton à l'utilisateur final) | Fiche `thing` d'un jeu ; aujourd'hui file `bgg` de `search` à ≤ 1 req / 2 s ; **cible décidée le 2026-11-14** : `bgg-data` seul appelant, 1 req / 5 s (F7, F8) ; `boardgamegeek.com` sans `www`, logo « Powered by BGG » dans l'app | pending : licence demandée le 2026-11-14 |
 | **BnF (SRU, sans auth)** | manga | Aucune (API publique) | Pivot **ISBN → série/tome FR** (titre romaji, auteur, édition) ; énumération des tomes d'une édition (`edition-mapping`) ; **liste des éditions FR** d'une série (`search/editions`) ; **rattrapage** des tomes catalogués depuis une date (`since`) | en service |
-| **Rebrickable** (CSV) | LEGO | Aucune : CSV publics `cdn.rebrickable.com/media/downloads/` (l'API n'est plus utilisée par la cible) | Catalogue de référence `rebrickable-data` : sets, thèmes, figurines, URL d'image ; import quotidien 03:00 UTC, garde `Last-Modified` | prête : `rebrickable-data` testé en dev, entré au déploiement le 2026-11-17 (C3), pas en production |
+| **Rebrickable** (CSV) | LEGO | Aucune : CSV publics `cdn.rebrickable.com/media/downloads/` (l'API n'est plus utilisée par la cible) | Catalogue de référence `rebrickable-data` : sets, thèmes, figurines, URL d'image ; import quotidien 03:00 UTC, garde `Last-Modified` | prête : `rebrickable-data` en production depuis le 2026-11-23, sans écran LEGO dans l'app |
 | **Brickset** (API v3) | LEGO | Clé `BRICKSET_API_KEY` (lue par `rebrickable-data` seulement) | Codes-barres `ean`/`upc`/`brickset_id` uniquement ; appel `getSets {query: code}` **au scan d'un code absent du cache** seulement (décision du 2026-11-16, codé le 2026-11-17, action C8) : un appel au plus par code, codes gardés 90 j puis effacés, code inconnu redemandé après 7 j (validé le 2026-11-17), budget 90 appels/jour UTC (`BRICKSET_DAILY_CALL_BUDGET`, quota Brickset 100) ; plus de moissonnage | pending : clé reçue le 2026-11-20 (plafond quotidien levable sur demande), accord pour l'usage commercial à demander (courrier F2 pas encore envoyé) ; la doc de l'API ne dit pas que `query` cherche dans les codes-barres, vérifié le 2026-11-20 sur un EAN (`5702015869935` → `75192-1`), pas sur un UPC seul |
 
 ## Architecture côté backend
@@ -73,7 +74,7 @@ Déclenché par le **seul** `bnf_not_found` (nouveauté non cataloguée, éditeu
 ## Recherche d'une série par titre (SD1 · SD3)
 
 Implémentée le 2026-11-02, fusionnée dans `main` le 2026-11-14 (monolithe, app et constellation),
-**pas encore en production** (la production tourne sur un monolithe antérieur). Mesures et
+en production par la constellation depuis le 2026-11-23. Mesures et
 sources : [../../etude-leviers-recherche-manga.md](../../etude-leviers-recherche-manga.md) ;
 décisions : [../../spec-macro-import-serie-manga.md](../../spec-macro-import-serie-manga.md).
 

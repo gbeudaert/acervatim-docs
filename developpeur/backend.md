@@ -10,11 +10,11 @@ nav_order: 2
 
 Le backend Acervatim est le composant serveur **optionnel** de l'écosystème. L'application Android fonctionne intégralement sans lui ; il n'entre en jeu que si vous activez le mode connecté.
 
-Il existe sous deux formes qui exposent la même API `/v1` : le **monolithe** (dépôt
-`acervatim-backend`), qui tourne en production, et la **constellation de micro-services** (dépôt
-`acervatim-services`), vers laquelle la production basculera — décision du 16 novembre 2026, date de
-bascule non fixée. Cette page décrit ce que l'API fait, quelle que soit la forme ; le découpage est
-présenté dans [Architecture](architecture.md).
+Il existe sous deux formes qui exposent la même API `/v1` : la **constellation de micro-services**
+(dépôt `acervatim-services`), en production depuis le 23 novembre 2026, et le **monolithe** (dépôt
+`acervatim-backend`), qui la servait jusque-là et reste gardé pour un retour. Cette page décrit ce
+que l'API fait, quelle que soit la forme ; le découpage est présenté dans
+[Architecture](architecture.md).
 
 ## Sommaire
 {: .no_toc .text-delta }
@@ -97,7 +97,7 @@ Le modèle serveur est le miroir du modèle local de l'application :
 ### Recherche externe unifiée
 
 - `GET /v1/search?type=...&q=...` (recherche texte) ou `GET /v1/search?type=...&barcode=...` (recherche par code EAN/UPC ou ISBN) — un seul endpoint quel que soit le type de collection. `q` et `barcode` sont **mutuellement exclusifs** (XOR : exactement l'un des deux). Le serveur choisit la ou les sources (Discogs pour le vinyle — `barcode` y route vers `database/search?barcode=…` ; BnF puis MangaDex pour le manga, MyAnimeList en repli ; TMDB pour les films), gère le cache et les débits, et renvoie des résultats au format unifié.
-- Manga : `GET /v1/search/edition-mapping` (tous les tomes d'une édition, avec jaquettes), `GET /v1/search/cover`, import de série asynchrone (`POST /v1/search/import-jobs`). Fusionnés dans `main`, pas encore en production : `GET /v1/search/editions` (éditions françaises d'une série) et `GET /v1/series-updates` (tomes parus).
+- Manga : `GET /v1/search/edition-mapping` (tous les tomes d'une édition, avec jaquettes), `GET /v1/search/cover`, import de série asynchrone (`POST /v1/search/import-jobs`). En production depuis la bascule du 23 novembre 2026 : `GET /v1/search/editions` (éditions françaises d'une série) et `GET /v1/series-updates` (tomes parus).
 - Jeux de société, **constellation seulement** : `GET /v1/search/boardgame/barcode/:code` et `POST /v1/search/boardgame/barcode/:code/choice` — GameUPC puis BoardGameGeek ; la clé GameUPC est accordée, la licence BoardGameGeek reste **pending**.
 
 ### Connexion de comptes externes

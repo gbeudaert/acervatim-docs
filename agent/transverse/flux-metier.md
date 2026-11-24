@@ -38,7 +38,8 @@ Scan ISBN d'un tome → SeriesImportScreen (route series/import?barcode=)
 
 ## 3bis. Ajout d'une série manga par titre, sans tome possédé (SD1 · AD1 · AD2)
 
-Fusionné dans `main` le 2026-11-14 (monolithe, app, constellation) ; pas encore en production. Cf.
+Fusionné dans `main` le 2026-11-14 (monolithe, app, constellation) ; en production par la
+constellation depuis le 2026-11-23. Cf.
 [../../spec-macro-import-serie-manga.md](../../spec-macro-import-serie-manga.md).
 
 ```

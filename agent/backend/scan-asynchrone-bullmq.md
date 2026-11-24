@@ -2,10 +2,11 @@
 
 > Remonter : [INDEX.md](INDEX.md) · Document de **suivi de chantier** (pas une page du site public).
 > But : charger ce fichier dans une session Claude pour reprendre le travail avec tout le contexte.
-> État au 2026-11-16 : P0 → P2 et P3 partiel sont dans `main` du monolithe depuis le 2026-07-20 et
-> **en production** ; le côté app de P1 est dans `main` de `acervatim-app` (commit `5e36253`). La file
-> `edition-watch` (§ 4ter) est fusionnée dans `main` le 2026-11-14, **pas encore en production**. Les
-> mêmes files ont été portées dans le service `search` de la constellation. Pivot **MangaDex source
+> État au 2026-11-24 : P0 → P2 et P3 partiel sont dans `main` du monolithe depuis le 2026-07-20 ; le
+> côté app de P1 est dans `main` de `acervatim-app` (commit `5e36253`). La file `edition-watch`
+> (§ 4ter) est fusionnée dans `main` le 2026-11-14. Les mêmes files ont été portées dans le service
+> `search` de la constellation, qui les fait tourner **en production** depuis la bascule du
+> 2026-11-23, `edition-watch` comprise. Pivot **MangaDex source
 > principale** (`c91f4cb`) — cf. [../../developpeur/sources-et-pivot-isbn.md](../../developpeur/sources-et-pivot-isbn.md).
 
 ## TL;DR

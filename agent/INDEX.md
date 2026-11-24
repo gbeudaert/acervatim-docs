@@ -12,11 +12,11 @@ Application de gestion de collections personnelles, offline-first, avec un serve
 (enrichissement, synchronisation et partage en premium). Quatre dépôts, tous publics sur GitHub
 (`github.com/gbeudaert/…`) :
 
-| Dépôt local | Dépôt GitHub | Rôle | État au 2026-11-16 |
+| Dépôt local | Dépôt GitHub | Rôle | État au 2026-11-24 |
 |---|---|---|---|
-| `acervatim-app/` | `acervatim-app` | App Android (Kotlin, Jetpack Compose ; Room = vérité locale, sync optionnelle) | `main` en avance sur le serveur de production (recherche de série manga par titre, tomes parus) |
-| `acervatim-backend/` | `acervatim-backend` | **Monolithe** NestJS + Prisma + MariaDB + Redis : auth Google anonymisée, collections, recherche externe, premium, invitations, partage | **En production**, construit fin août 2026 ; `main` porte six commits de plus (manga) non déployés |
-| `acervatim/backend-services/` | `acervatim-services` | **Constellation** : le même `/v1/*` découpé en services derrière un `gateway` ; LEGO et jeux de société n'existent qu'ici | **Cible engagée le 2026-11-16** (bascule complète décidée) ; tourne en dev, pas encore sous Podman ni en production |
+| `acervatim-app/` | `acervatim-app` | App Android (Kotlin, Jetpack Compose ; Room = vérité locale, sync optionnelle) | La recherche de série manga par titre et les tomes parus ont leurs routes en production depuis la bascule du 2026-11-23 |
+| `acervatim-backend/` | `acervatim-backend` | **Monolithe** NestJS + Prisma + MariaDB + Redis : auth Google anonymisée, collections, recherche externe, premium, invitations, partage | **Arrêté depuis la bascule du 2026-11-23**, gardé pour un retour pendant la fenêtre de retour ; `main` porte six commits de plus (manga), jamais déployés |
+| `acervatim/backend-services/` | `acervatim-services` | **Constellation** : le même `/v1/*` découpé en services derrière un `gateway` ; LEGO et jeux de société n'existent qu'ici | **En production depuis le 2026-11-23** : pod Podman sur l'hôte, schémas sur l'instance MariaDB du monolithe |
 | `acervatim-docs/` | `acervatim-docs` | Ce dépôt : site Jekyll public (utilisateur / développeur / légal) + cette doc agent sous `agent/` (exclue du site) + documents de travail à la racine | Site publié sur `gbeudaert.github.io/acervatim-docs` |
 
 ## Types de collection
@@ -123,7 +123,7 @@ INDEX.md (toi ici)
 |---|---|---|
 | `audit-etat-avancement.md` | État d'avancement du projet, tous dépôts | Local (ignoré par git), refait le 2026-11-16 |
 | `dossier-jeux-de-societe-bgg-gameupc.md` | Sources, licences et conception des jeux de société | En cours (lot F) : licence BGG et clé GameUPC pending |
-| `spec-macro-import-serie-manga.md` | Ajout d'une série manga par titre (SD1-SD3, AD1-AD3) | Fusionné dans `main` le 2026-11-14, pas en production |
+| `spec-macro-import-serie-manga.md` | Ajout d'une série manga par titre (SD1-SD3, AD1-AD3) | Fusionné dans `main` le 2026-11-14, en production par la constellation depuis le 2026-11-23 |
 | `audit-limitations-recherche-manga.md`, `etude-leviers-recherche-manga.md` | Constat et leviers de la recherche manga | Clos, décisions reportées dans la spec ci-dessus |
 | `spec-macro-recherche-tris-galerie.md` | Recherche texte, tris, galerie | Livré (août 2026) |
 | `spec-macro-partage-collection.md` | Partage de collections | Serveur livré ; app : consultation et gestion livrées |

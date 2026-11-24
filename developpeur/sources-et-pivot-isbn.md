@@ -9,9 +9,9 @@ nav_order: 8
 
 D'où viennent les métadonnées que le serveur renvoie, comment chaque source est appelée, et où elle
 en est. La seconde moitié de la page détaille le cas le plus complexe : la résolution d'un **ISBN de
-manga** en une série. Le code fait foi : le monolithe `acervatim-backend` (`src/common/sources/`,
-`src/oauth/providers/`) pour ce qui tourne en production, et la constellation `acervatim-services`
-(services `search` et `rebrickable-data`) pour la cible décidée le 16 novembre 2026.
+manga** en une série. Le code fait foi : la constellation `acervatim-services` (services `search` et
+`rebrickable-data`), en production depuis le 23 novembre 2026, et le monolithe `acervatim-backend`
+(`src/common/sources/`, `src/oauth/providers/`), dont elle a repris les adapters.
 
 **Statuts** : **en service** = appelée par la production ; **prête** = branchée dans le code, pas en
 production ou sans écran dans l'application ; **pending** = attend une réponse ou un accord d'un
@@ -27,9 +27,9 @@ tiers.
 | [MyAnimeList](https://myanimelist.net) ([API](https://myanimelist.net/apiconfig/references/api/v2)) | manga | Repli d'identité et de recherche quand MangaDex échoue | Compte de l'utilisateur (OAuth 2 PKCE) ; en premium, `MAL_CLIENT_ID` | File `mal` : 3 requêtes/s, 2 en parallèle | en service |
 | [Google Books](https://books.google.com) ([API](https://developers.google.com/books)) | manga | Repli de jaquette et de résumé par tome ; titre d'un ISBN inconnu de la BnF | Clé facultative (`GOOGLE_BOOKS_API_KEY`) | File `gbooks` : 4 requêtes/s, 1 en parallèle | en service |
 | [TMDB](https://www.themoviedb.org) ([API](https://developer.themoviedb.org/docs)) | film | Recherche et détail d'un film | Clé personnelle de l'utilisateur (`PUT /v1/sources/tmdb/token`) ; en premium, `TMDB_API_KEY` | File `tmdb` : 20 requêtes/s, 4 en parallèle | prête : pas de collection film dans l'application |
-| [Rebrickable](https://rebrickable.com) ([téléchargements](https://rebrickable.com/downloads/)) | LEGO | Catalogue des sets, thèmes, figurines, images | Aucun : fichiers CSV publics | Un import par jour, 03:00 UTC | prête : service `rebrickable-data`, pas en production |
+| [Rebrickable](https://rebrickable.com) ([téléchargements](https://rebrickable.com/downloads/)) | LEGO | Catalogue des sets, thèmes, figurines, images | Aucun : fichiers CSV publics | Un import par jour, 03:00 UTC | prête : service `rebrickable-data`, en production depuis le 23 novembre 2026, sans écran LEGO dans l'app |
 | [Brickset](https://brickset.com) ([API](https://brickset.com/article/52664/api-version-3-documentation)) | LEGO | Codes-barres EAN et UPC des boîtes | Clé `BRICKSET_API_KEY` | Brickset autorise 100 appels par jour sur une clé gratuite ; le code en consomme 90 au plus (`BRICKSET_DAILY_CALL_BUDGET`), un par code scanné absent du cache | pending : clé reçue le 20 novembre 2026, accord pour un usage commercial à demander |
-| [GameUPC](https://gameupc.com) | jeu de société | Code-barres → identifiant BoardGameGeek ; retour des choix des utilisateurs | Clé `GAMEUPC_API_KEY` (production) ; serveur de test en développement | Files `gameupc` (15/min) et `gameupc-feedback` (5/min), sous les ~30 requêtes/min que GameUPC indique | prête : clé de production accordée le 18 novembre 2026 ; service `search`, pas en production |
+| [GameUPC](https://gameupc.com) | jeu de société | Code-barres → identifiant BoardGameGeek ; retour des choix des utilisateurs | Clé `GAMEUPC_API_KEY` (production) ; serveur de test en développement | Files `gameupc` (15/min) et `gameupc-feedback` (5/min), sous les ~30 requêtes/min que GameUPC indique | prête : clé de production accordée le 18 novembre 2026 ; service `search`, en production depuis le 23 novembre 2026, sans écran jeux de société dans l'app |
 | [BoardGameGeek](https://boardgamegeek.com) ([XML API2](https://boardgamegeek.com/wiki/page/BGG_XML_API2)) | jeu de société | Fiche d'un jeu | Jeton d'application `BGG_API_TOKEN`, vide : aucun appel ne part | File `bgg` : 1 requête toutes les 2 s ; cible : `bgg-data` seul appelant, 1 toutes les 5 s | pending : licence demandée |
 
 Les livres (`book`) et les jeux vidéo (`game`) sont des types de collection du serveur sans aucune
